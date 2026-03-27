@@ -1,0 +1,2142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>REFFINE · Translation Hub</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+
+<!-- CDN Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:           #0d0d0d;
+  --bg-panel:     #141414;
+  --bg-raised:    #1a1a1a;
+  --bg-input:     #1e1e1e;
+  --bg-hover:     #242424;
+
+  --gold:         #00d084;
+  --gold-light:   #00e896;
+  --gold-dim:     #00a86b;
+  --gold-faint:   rgba(0,208,132,0.08);
+  --gold-border:  rgba(0,208,132,0.22);
+
+  --border:       rgba(255,255,255,0.07);
+  --border-mid:   rgba(255,255,255,0.11);
+
+  --text:         #f0ede8;
+  --text-muted:   #9a9490;
+  --text-dim:     #5c5856;
+
+  --green-live:   #22c55e;
+  --red:          #ef4444;
+  --amber:        #f59e0b;
+
+  --radius:       10px;
+  --transition:   180ms cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', 'Helvetica Neue', sans-serif;
+  font-weight: 300;
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Noise overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  background-size: 180px;
+  pointer-events: none; z-index: 0;
+}
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(0,208,132,0.35); border-radius: 2px; }
+::selection { background: var(--gold-faint); color: var(--gold-light); }
+
+.font-display { font-family: 'Cormorant Garamond', Georgia, serif; }
+.font-mono    { font-family: 'DM Mono', monospace; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TOP ACCENT LINE
+═══════════════════════════════════════════════════════════════ */
+#accent-line {
+  position: fixed; top: 0; left: 0; right: 0; height: 1px; z-index: 100;
+  background: linear-gradient(90deg, transparent 0%, var(--gold) 25%, var(--gold-light) 50%, var(--gold) 75%, transparent 100%);
+  opacity: 0.55;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER / TOPBAR
+═══════════════════════════════════════════════════════════════ */
+#topbar {
+  display: none;
+}
+
+.topbar-brand {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+
+.brand-diamond {
+  width: 22px; height: 22px; flex-shrink: 0;
+}
+
+.brand-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.topbar-sep {
+  width: 1px; height: 20px; background: var(--border-mid); flex-shrink: 0;
+}
+
+/* Clocks */
+.topbar-clocks {
+  display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+}
+.clock-item {
+  display: flex; align-items: center; gap: 6px;
+}
+.clock-city {
+  font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.clock-time {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem; color: var(--text-muted);
+  min-width: 42px;
+}
+
+/* Live indicator */
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green-live);
+  box-shadow: 0 0 8px var(--green-live);
+  animation: pulse-live 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse-live {
+  0%,100% { opacity:1; box-shadow:0 0 6px var(--green-live); }
+  50%      { opacity:0.5; box-shadow:0 0 14px var(--green-live); }
+}
+
+/* Nav tabs */
+.topbar-nav {
+  display: flex; align-items: center; gap: 2px; margin-left: auto;
+}
+.nav-tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem; font-weight: 400;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.nav-tab:hover { color: var(--text-muted); background: var(--bg-hover); }
+.nav-tab.active {
+  color: var(--gold);
+  background: var(--gold-faint);
+  border-color: var(--gold-border);
+}
+
+/* API key status badge */
+
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN LAYOUT
+═══════════════════════════════════════════════════════════════ */
+#main {
+  position: relative; z-index: 1;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 76px 24px 80px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE HEADER
+═══════════════════════════════════════════════════════════════ */
+.page-header {
+  margin-bottom: 32px;
+  opacity: 0; transform: translateY(16px);
+  animation: reveal 0.6s ease-out 0.1s forwards;
+}
+.page-eyebrow {
+  font-size: 0.58rem; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--gold-dim); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.page-eyebrow::before, .page-eyebrow::after {
+  content: ''; height: 1px; flex: 0 0 30px; background: var(--gold-border);
+}
+.page-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 300; line-height: 1.05;
+  letter-spacing: 0.01em; color: var(--text);
+}
+.page-title em {
+  font-style: italic; color: var(--gold); font-weight: 300;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODE TABS (Text / Documents)
+═══════════════════════════════════════════════════════════════ */
+.mode-tabs {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+  opacity: 0; animation: reveal 0.5s ease-out 0.25s forwards;
+}
+.mode-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 22px;
+  border: none; background: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem; font-weight: 400;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all var(--transition);
+}
+.mode-tab:hover { color: var(--text-muted); }
+.mode-tab.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TRANSLATION CONTAINER
+═══════════════════════════════════════════════════════════════ */
+.translation-wrap {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  opacity: 0; animation: reveal 0.5s ease-out 0.35s forwards;
+}
+
+/* Language Bar */
+.lang-bar {
+  display: flex; align-items: center;
+  padding: 0 20px;
+  height: 56px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+
+/* Dropdown select */
+.lang-select {
+  appearance: none;
+  background: var(--bg-raised);
+  border: 1px solid var(--gold-border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.78rem; font-weight: 400;
+  letter-spacing: 0.06em;
+  padding: 9px 38px 9px 16px;
+  cursor: pointer; flex: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.lang-select:focus { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-faint); }
+.lang-select:hover { border-color: var(--gold); }
+.lang-select option { background: var(--bg-panel, #1a1a1a); color: var(--text); }
+
+/* Swap button */
+.swap-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.swap-btn:hover {
+  border-color: var(--gold-border);
+  color: var(--gold);
+  background: var(--gold-faint);
+  transform: rotate(180deg);
+}
+/* ═══════════════════════════════════════════════════════════════
+   TEXT MODE — dual panel
+═══════════════════════════════════════════════════════════════ */
+#text-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 340px;
+}
+
+.text-panel {
+  display: flex; flex-direction: column;
+  position: relative;
+}
+.text-panel:first-child { border-right: 1px solid var(--border); }
+
+.panel-textarea {
+  flex: 1;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem; font-weight: 300;
+  line-height: 1.75;
+  padding: 20px 22px;
+  resize: none;
+  min-height: 300px;
+  transition: color var(--transition);
+}
+.panel-textarea::placeholder { color: var(--text-dim); font-style: italic; }
+.panel-textarea.output-area { background: rgba(0,0,0,0.15); }
+
+/* Char counter */
+.char-count {
+  position: absolute; bottom: 12px; right: 16px;
+  font-size: 0.6rem; color: var(--text-dim);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.05em; pointer-events: none;
+}
+
+/* Copy button */
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px;
+  background: var(--bg-raised);
+  border: 1px solid var(--gold-border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.62rem; letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.copy-btn:hover { color: var(--gold); border-color: var(--gold); }
+.copy-btn.copied { color: var(--green-live); border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.06); }
+
+/* Text mode bottom bar */
+.text-bottom-bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DOCUMENT MODE
+═══════════════════════════════════════════════════════════════ */
+#doc-body {
+  display: grid;
+  grid-template-columns: 1fr 1px 380px;
+  min-height: 340px;
+}
+
+.doc-drop-zone {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; padding: 48px 32px;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.doc-drop-zone:hover, .doc-drop-zone.dragover {
+  background: rgba(212,175,55,0.03);
+}
+
+.doc-divider { background: var(--border); }
+
+.doc-browse-panel {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 32px; gap: 18px;
+}
+
+/* Cloud illustration */
+.cloud-wrap { position: relative; }
+.cloud-svg { transition: all 0.3s ease; }
+.doc-drop-zone.dragover .cloud-svg { filter: drop-shadow(0 0 16px rgba(212,175,55,0.3)); }
+
+/* File card (after upload) */
+.file-card {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  text-align: center;
+}
+.file-icon-circle {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--gold-faint);
+  border: 1px solid var(--gold-border);
+  display: flex; align-items: center; justify-content: center;
+}
+.file-name {
+  font-size: 0.88rem; font-weight: 400; color: var(--text);
+  word-break: break-all; max-width: 200px;
+}
+.file-meta { font-size: 0.68rem; color: var(--text-muted); letter-spacing: 0.05em; }
+
+/* Progress */
+.progress-wrap { width: 100%; }
+.progress-labels {
+  display: flex; justify-content: space-between; margin-bottom: 6px;
+}
+.progress-label { font-size: 0.65rem; color: var(--text-muted); letter-spacing: 0.08em; }
+.progress-pct { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--gold); }
+.progress-track {
+  height: 2px; background: var(--bg-hover); border-radius: 1px; overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-dim), var(--gold), var(--gold-light));
+  border-radius: 1px;
+  transition: width 0.35s ease;
+}
+
+/* Done banner */
+#done-banner {
+  display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: space-between;
+  gap: 16px; padding: 28px 28px;
+  border-top: 1px solid var(--gold-border);
+  background: rgba(212,175,55,0.03);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+.done-info { display: flex; align-items: center; gap: 14px; }
+.done-icon-ring {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--gold-faint);
+  border: 1px solid var(--gold-border);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.done-title { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 400; }
+.done-sub { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.04em; }
+
+/* ═══════════════════════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════════════════════ */
+.btn-gold {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 11px 28px;
+  background: var(--gold);
+  color: #111;
+  border: none; border-radius: 4px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem; font-weight: 500;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative; overflow: hidden;
+}
+.btn-gold::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%);
+  pointer-events: none;
+}
+.btn-gold:hover { background: var(--gold-light); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(212,175,55,0.22); }
+.btn-gold:active { transform: translateY(0); box-shadow: none; }
+.btn-gold:disabled { opacity: 0.38; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-gold.full { width: 100%; }
+
+.btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px 20px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.68rem; font-weight: 400;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-ghost:hover { border-color: var(--gold-border); color: var(--gold); }
+
+/* Spinner */
+.spinner {
+  width: 14px; height: 14px;
+  border: 1.5px solid rgba(17,17,17,0.3);
+  border-top-color: #111;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════════════════════
+   SHIMMER (loading output)
+═══════════════════════════════════════════════════════════════ */
+@keyframes shimmer {
+  0%   { background-position: -300% 0; }
+  100% { background-position:  300% 0; }
+}
+.shimmer-overlay {
+  position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: linear-gradient(90deg, transparent 20%, rgba(212,175,55,0.04) 50%, transparent 80%);
+  background-size: 300% 100%;
+  animation: shimmer 1.6s ease infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ERROR / NOTICE
+═══════════════════════════════════════════════════════════════ */
+.error-bar {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 14px;
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 6px;
+  color: #f87171;
+  font-size: 0.7rem; line-height: 1.6;
+  width: 100%;
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════
+   LANGUAGE PILLS (bottom of page)
+═══════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════════════════════════ */
+#footer {
+  position: relative; z-index: 1;
+  border-top: 1px solid var(--border);
+  padding: 18px 24px;
+  margin-top: auto;
+}
+.footer-inner {
+  max-width: 1140px; margin: 0 auto;
+  display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: space-between; gap: 8px;
+}
+.footer-brand {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--gold-dim);
+}
+.footer-note {
+  font-size: 0.58rem; color: var(--text-dim); letter-spacing: 0.05em;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════════════════════ */
+@keyframes reveal {
+  to { opacity: 1; transform: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 860px) {
+  #text-panels {
+    grid-template-columns: 1fr;
+  }
+  .text-panel:first-child {
+    border-right: none; border-bottom: 1px solid var(--border);
+  }
+  #doc-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1px auto;
+  }
+  .doc-divider { width: 100%; height: 1px; }
+  .doc-browse-panel { border-top: none; }
+}
+
+@media (max-width: 600px) {
+  #topbar { padding: 0 14px; gap: 10px; }
+  .topbar-clocks { display: none; }
+  #main { padding: 24px 14px 60px; }
+  .lang-bar { overflow-x: auto; }
+}
+
+
+/* ═══════════════════════════════════════════════════
+   REFFINE SHARED NAV CSS — same on all pages
+═══════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root { --border: rgba(255,255,255,0.07); --border-hov: rgba(255,255,255,0.14); --text: #f5f5f5; --text-2: #8a8e9c; --text-3: rgba(138,142,156,0.5); --accent: #00d084; }
+
+.rf-topnav {
+  position: fixed; top: 0; left: 0; right: 0; height: 60px;
+  background: rgba(10,11,13,0.96); border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex; align-items: center; padding: 0 1.5rem; gap: 0.75rem;
+  z-index: 9999; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  font-family: 'Inter', sans-serif; box-sizing: border-box; overflow: hidden;
+}
+.rf-nav-logo {
+  display: flex; flex-direction: column; gap: 1px; line-height: 1.1;
+  text-decoration: none; flex-shrink: 0; white-space: nowrap;
+}
+.rf-nav-logo .rf-logo-main { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; color: #f5f5f5; }
+.rf-nav-logo .rf-logo-sub  { font-size: 0.48rem; font-weight: 500; letter-spacing: 0.18em; color: rgba(138,142,156,0.45); text-transform: uppercase; }
+.rf-dot { color: #00d084; }
+.rf-topnav-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.08); flex-shrink: 0; }
+.rf-nav-right { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.rf-navlink {
+  padding: 0.3rem 0.65rem; border-radius: 4px; font-size: 0.66rem; font-weight: 600;
+  letter-spacing: 0.04em; color: #8a8e9c; text-decoration: none; transition: all 0.15s;
+  white-space: nowrap; border: 1px solid transparent; cursor: pointer;
+  background: none; font-family: 'Inter', sans-serif;
+}
+.rf-navlink:hover { color: #f5f5f5; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.06); }
+.rf-navlink.rf-active { color: #00d084; background: rgba(0,208,132,0.08); border-color: rgba(0,208,132,0.18); }
+
+/* Clocks */
+.rf-nav-clock { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+.rf-nav-clock canvas { border-radius: 50%; }
+.rf-clock-city { font-size: 0.52rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(138,142,156,0.5); display: block; }
+.rf-clock-time { font-size: 0.75rem; font-weight: 600; color: #f5f5f5; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; display: block; }
+
+/* Meeting countdown cards */
+.rf-meeting-cards { display: flex; gap: 0.4rem; align-items: stretch; flex-shrink: 0; }
+.rf-meeting-card {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 5px; padding: 0.28rem 0.6rem;
+  display: flex; flex-direction: column; gap: 0; text-decoration: none;
+  transition: border-color 0.15s; min-width: 100px; cursor: pointer;
+}
+.rf-meeting-card:hover { border-color: rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); }
+.rf-meeting-card.active-meeting { border-color: rgba(0,208,132,0.5); background: rgba(0,208,132,0.07); }
+.rf-meeting-title { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8a8e9c; white-space: nowrap; }
+.rf-meeting-countdown { font-size: 0.72rem; font-weight: 700; color: #f5f5f5; letter-spacing: 0.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rf-meeting-countdown.soon { color: #00d084; }
+.rf-meeting-countdown.now  { color: #e8424a; animation: rf-pulse 1s infinite; }
+.rf-meeting-sub { font-size: 0.48rem; color: rgba(138,142,156,0.5); white-space: nowrap; }
+@keyframes rf-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* Right section (clocks + cards) */
+.rf-right-section { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; flex-shrink: 0; }
+
+/* Hamburger */
+.rf-hamburger {
+  display: none; background: none; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px; padding: 6px 8px; cursor: pointer; flex-direction: column;
+  align-items: center; justify-content: center; flex-shrink: 0; gap: 4px;
+}
+.rf-hamburger span { display: block; width: 18px; height: 1.5px; background: #f5f5f5; border-radius: 2px; transition: all 0.25s; }
+.rf-hamburger.open span:nth-child(1) { transform: translateY(5.5px) rotate(45deg); }
+.rf-hamburger.open span:nth-child(2) { opacity: 0; }
+.rf-hamburger.open span:nth-child(3) { transform: translateY(-5.5px) rotate(-45deg); }
+
+/* Mobile drawer */
+.rf-mobile-drawer {
+  display: none; position: fixed; top: 60px; left: 0; right: 0; z-index: 9998;
+  background: rgba(10,11,13,0.98); border-bottom: 1px solid rgba(255,255,255,0.09);
+  padding: 0.75rem 1.5rem 1rem; flex-direction: column; gap: 2px;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.rf-mobile-drawer.open { display: flex; }
+.rf-drawer-link {
+  padding: 0.65rem 0.75rem; border-radius: 5px; font-size: 0.78rem; font-weight: 600;
+  color: #8a8e9c; text-decoration: none; border: 1px solid transparent; display: flex; align-items: center; gap: 8px;
+  background: none; font-family: 'Inter', sans-serif; cursor: pointer;
+}
+.rf-drawer-link:hover { color: #f5f5f5; background: rgba(255,255,255,0.04); }
+.rf-drawer-link.rf-active { color: #00d084; background: rgba(0,208,132,0.07); border-color: rgba(0,208,132,0.15); }
+
+/* Footer */
+.rf-footer { background: #0a0b0d; border-top: 1px solid rgba(255,255,255,0.06); padding: 1.25rem 2rem; font-family: 'Inter', sans-serif; }
+.rf-footer-inner { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.rf-footer-brand { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(138,142,156,0.32); }
+.rf-footer-links { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.rf-footer-link { padding: 0.28rem 0.65rem; border-radius: 4px; font-size: 0.67rem; font-weight: 500; letter-spacing: 0.04em; color: #8a8e9c; text-decoration: none; transition: color 0.15s; }
+.rf-footer-link:hover { color: #f5f5f5; }
+.rf-footer-link.rf-active { color: #00d084; }
+
+@media (max-width: 1200px) { .rf-right-section { display: none !important; } }
+
+
+
+@media (max-width: 1100px) { .rf-nav-right { display: none !important; } .rf-hamburger { display: flex !important; } }
+
+/* ── LIGHT THEME EXTRA FIXES ── */
+/* Clock text */
+body.rf-light .rf-clock-time { color: #0f1117 !important; }
+body.rf-light .rf-clock-city { color: rgba(82,89,107,0.6) !important; }
+
+/* Nav dividers */
+body.rf-light .rf-topnav-divider,
+body.rf-light [style*="background:rgba(255,255,255,0.08)"] { background: rgba(0,0,0,0.1) !important; }
+
+/* Meeting cards */
+body.rf-light .rf-meeting-title { color: #52596b; }
+body.rf-light .rf-meeting-sub { color: rgba(82,89,107,0.6); }
+body.rf-light .rf-meeting-countdown { color: #0f1117; }
+body.rf-light .rf-meeting-card { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); }
+body.rf-light .rf-meeting-card:hover { background: rgba(0,0,0,0.07); border-color: rgba(0,0,0,0.16); }
+
+/* Hamburger */
+body.rf-light .rf-hamburger { border-color: rgba(0,0,0,0.15); }
+body.rf-light .rf-hamburger span { background: #1a1d23; }
+
+/* Theme button */
+body.rf-light .rf-theme-btn { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.13) !important; color: #52596b !important; }
+body.rf-light .rf-theme-btn:hover { background: rgba(0,0,0,0.1) !important; color: #0f1117 !important; }
+
+/* ── INDEX PAGE: filter bar + week planner ── */
+body.rf-light .mobile-filterbar { background: rgba(255,255,255,0.97) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .filterbar-row { background: transparent; }
+body.rf-light .filterbar-row-2 { border-top-color: rgba(0,0,0,0.08) !important; }
+body.rf-light .mobile-brand-btn { color: #52596b; border-color: rgba(0,0,0,0.12); background: transparent; }
+body.rf-light .mobile-brand-btn:hover { color: #0f1117; border-color: rgba(0,0,0,0.2); background: rgba(0,0,0,0.04); }
+body.rf-light .mobile-brand-btn.active-lrdx { background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.35); color: #007d50; }
+body.rf-light .mobile-brand-btn.active-rr   { background: rgba(180,130,60,0.1); border-color: rgba(180,130,60,0.35); color: #8a6020; }
+body.rf-light .mobile-brand-btn.active-jdx  { background: rgba(200,50,50,0.1); border-color: rgba(200,50,50,0.35); color: #b01010; }
+body.rf-light .mobile-region-btn { color: #52596b; border-color: rgba(0,0,0,0.12); background: transparent; }
+body.rf-light .mobile-region-btn.active { background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.3); color: #007d50; }
+body.rf-light .nav-modes { background: rgba(0,0,0,0.04) !important; border-color: rgba(0,0,0,0.1) !important; }
+body.rf-light .nav-modes label { color: #52596b; }
+body.rf-light .nav-modes input:checked + label { background: #fff; color: #0f1117; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+body.rf-light #searchInput { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); color: #0f1117; }
+
+/* Week planner colours */
+body.rf-light #tempoCalendar,
+body.rf-light .tempo-inner { background: #f0f2f5; }
+body.rf-light #tpGrid > div[style*="#0d0f12"],
+body.rf-light [style*="background:#0d0f12"] { background: #e8eaed !important; }
+body.rf-light [style*="background:rgba(255,255,255,.04)"],
+body.rf-light [style*="background:rgba(255,255,255,.025)"] { border-color: rgba(0,0,0,0.07) !important; }
+body.rf-light [style*="color:#f0f0f0"],
+body.rf-light [style*="color: #f0f0f0"] { color: #0f1117 !important; }
+body.rf-light [style*="color:rgba(138,142,156,.75)"] { color: #52596b !important; }
+body.rf-light [style*="color:#00d084"][style*="font-weight:800"],
+body.rf-light [style*="color:#00d084"][style*="font-size:.82rem"] { color: #007d50 !important; }
+body.rf-light [style*="rgba(255,255,255,.08)"] { border-color: rgba(0,0,0,0.09) !important; }
+body.rf-light [style*="rgba(255,255,255,.07)"] { border-color: rgba(0,0,0,0.08) !important; }
+body.rf-light [style*="rgba(0,208,132,.018)"] { background: rgba(0,166,106,0.04) !important; }
+body.rf-light [style*="rgba(0,208,132,.05)"] { background: rgba(0,166,106,0.08) !important; }
+body.rf-light [style*="rgba(138,142,156,.65)"] { color: #8a8e9c !important; }
+body.rf-light [style*="rgba(138,142,156,.25)"] { color: rgba(82,89,107,0.35) !important; }
+body.rf-light [style*="rgba(138,142,156,.45)"] { color: rgba(82,89,107,0.55) !important; }
+
+/* Panel toggle button */
+body.rf-light .panel-toggle-btn { background: #fff; border-color: rgba(0,0,0,0.2); color: #52596b; }
+
+/* ── TRANSLATION PAGE ── */
+body.rf-light .translation-wrap { background: #fff; border-color: rgba(0,0,0,0.1); }
+body.rf-light .lang-bar { border-bottom-color: rgba(0,0,0,0.08); }
+body.rf-light .lang-select { background: #f5f7fa; border-color: rgba(0,0,0,0.12); color: #0f1117; color-scheme: light; }
+body.rf-light .lang-select option { background: #f5f7fa; color: #0f1117; }
+body.rf-light .mode-tabs { border-bottom-color: rgba(0,0,0,0.08); }
+body.rf-light .mode-tab { color: #52596b; }
+body.rf-light .mode-tab.active { color: #007d50; border-bottom-color: #00a66a; }
+body.rf-light .panel-textarea { color: #0f1117; }
+body.rf-light .panel-textarea.output-area { background: rgba(0,0,0,0.02); }
+body.rf-light .text-bottom-bar { border-top-color: rgba(0,0,0,0.08); background: transparent; }
+
+
+/* ─── LIGHT THEME ─── */
+body.rf-light {
+  --bg:         #f0f2f5;
+  --surface:    #ffffff;
+  --surface-2:  #e8eaed;
+  --nav:        #ffffff;
+  --card:       #ffffff;
+  --card-hov:   #f5f7fa;
+  --border:     rgba(0,0,0,0.09);
+  --border-hov: rgba(0,0,0,0.18);
+  --text:       #0f1117;
+  --text-2:     #52596b;
+  --text-3:     rgba(82,89,107,0.55);
+  color-scheme: light;
+}
+body.rf-light .rf-topnav { background: rgba(255,255,255,0.96) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-mobile-drawer { background: rgba(248,249,252,0.99) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-meeting-card { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); }
+body.rf-light .rf-meeting-card:hover { background: rgba(0,0,0,0.06); }
+body.rf-light .rf-footer { background: #e8eaed !important; border-top-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-navlink { color: #52596b; }
+body.rf-light .rf-navlink:hover { color: #0f1117; background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.09); }
+body.rf-light .rf-navlink.rf-active { color: #00a66a; background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.25); }
+body.rf-light .rf-drawer-link { color: #52596b; }
+body.rf-light .rf-drawer-link:hover { color: #0f1117; background: rgba(0,0,0,0.04); }
+body.rf-light .rf-footer-link { color: #52596b; }
+body.rf-light .rf-footer-link:hover { color: #0f1117; }
+body.rf-light .rf-footer-brand { color: rgba(82,89,107,0.4); }
+body.rf-light .rf-topnav-divider { background: rgba(0,0,0,0.09); }
+body.rf-light .rf-nav-logo .rf-logo-main { color: #0f1117 !important; }
+body.rf-light .rf-nav-logo .rf-logo-sub  { color: rgba(82,89,107,0.55) !important; }
+body.rf-light .rf-dot { color: #00a66a !important; }
+
+/* Theme toggle button */
+.rf-theme-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 6px; flex-shrink: 0;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: #8a8e9c; cursor: pointer; transition: all 0.15s;
+  font-family: inherit; padding: 0;
+}
+.rf-theme-btn:hover { background: rgba(255,255,255,0.1); color: #f5f5f5; border-color: rgba(255,255,255,0.2); }
+body.rf-light .rf-theme-btn { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); color: #52596b; }
+body.rf-light .rf-theme-btn:hover { background: rgba(0,0,0,0.1); color: #0f1117; }
+.rf-theme-btn .rf-icon-sun  { display: none; }
+.rf-theme-btn .rf-icon-moon { display: block; }
+body.rf-light .rf-theme-btn .rf-icon-sun  { display: block; }
+body.rf-light .rf-theme-btn .rf-icon-moon { display: none; }
+
+
+
+/* Back to dashboard button */
+.rf-back-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0.28rem 0.7rem; border-radius: 5px;
+  font-size: 0.66rem; font-weight: 600; letter-spacing: 0.04em;
+  color: #8a8e9c; text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+}
+.rf-back-btn:hover { color: #f5f5f5; border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); }
+body.rf-light .rf-back-btn { color: #52596b; border-color: rgba(0,0,0,0.13); background: rgba(0,0,0,0.04); }
+body.rf-light .rf-back-btn:hover { color: #0f1117; border-color: rgba(0,0,0,0.22); background: rgba(0,0,0,0.08); }
+</style>
+</head>
+
+<body>
+
+<!-- ═══ REFFINE SHARED NAV ═══ -->
+<nav class="rf-topnav" id="rfTopNav">
+
+  <!-- Logo -->
+  <a href="index.html" class="rf-nav-logo">
+    <span class="rf-logo-main">REFFINE <span class="rf-dot">·</span> MENA HUB</span>
+    <span class="rf-logo-sub">Reffine JLR MENA Dashboard</span>
+  </a>
+  <div class="rf-topnav-divider"></div>
+
+  <!-- Desktop nav links -->
+  <div class="rf-nav-right">
+    <a href="index.html"              class="rf-navlink" data-rfpage="index">Dashboard</a>
+    <a href="translation.html"        class="rf-navlink" data-rfpage="translation">Translate</a>
+    <a href="translation-tool.html"   class="rf-navlink" data-rfpage="translation-tool">Translate Tool</a>
+    <a href="seo-tool.html"           class="rf-navlink" data-rfpage="seo-tool">SEO</a>
+    <a href="offer-generator.html"    class="rf-navlink" data-rfpage="offer-generator">Offers</a>
+    <a href="retailer-locator.html"  class="rf-navlink" data-rfpage="retailer-locator">Retailers</a>
+    <div class="rf-topnav-divider"></div>
+    <button class="rf-navlink" id="rfBtnResources">Docs</button>
+    <button class="rf-navlink" id="rfBtnEmails">Mails</button>
+  </div>
+
+  <!-- Clocks + countdowns (hidden <1200px) -->
+  <div class="rf-right-section">
+    <div class="rf-nav-clock">
+      <canvas id="rfClockDubai" width="34" height="34"></canvas>
+      <div><span class="rf-clock-city">Dubai</span><span class="rf-clock-time" id="rfClockTimeDubai">--:--</span></div>
+    </div>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+    <div class="rf-nav-clock">
+      <canvas id="rfClockWarsaw" width="34" height="34"></canvas>
+      <div><span class="rf-clock-city">Warsaw</span><span class="rf-clock-time" id="rfClockTimeWarsaw">--:--</span></div>
+    </div>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+    <div class="rf-meeting-cards">
+      <a class="rf-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d" target="_blank">
+        <div class="rf-meeting-title">Weekly Call</div>
+        <div class="rf-meeting-countdown" id="rfWeeklyCountdown">--:--</div>
+        <div class="rf-meeting-sub">Mon 1:00 PM Warsaw</div>
+      </a>
+      <a class="rf-meeting-card" id="rfDailyCardLink" href="https://meet.google.com/pgy-nkum-gic" target="_blank">
+        <div class="rf-meeting-title">Daily Call</div>
+        <div class="rf-meeting-countdown" id="rfDailyCountdown">--:--</div>
+        <div class="rf-meeting-sub">07:45 · Thu 07:30 Warsaw</div>
+      </a>
+      <a class="rf-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d" target="_blank">
+        <div class="rf-meeting-title">Offers Call</div>
+        <div class="rf-meeting-countdown" id="rfOffersCountdown">--:--</div>
+        <div class="rf-meeting-sub">Thu 8:00 AM Warsaw</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Hamburger (mobile) -->
+  <button class="rf-theme-btn" id="rfThemeBtn" style="margin-left:6px;" title="Toggle light/dark theme" aria-label="Toggle theme">
+    <svg class="rf-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="rf-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  
+  <a href="index.html" class="rf-back-btn" title="Back to Dashboard">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    Dashboard
+  </a>
+  <button class="rf-hamburger" id="rfHamburger" aria-label="Menu" style="margin-left:4px;">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile drawer -->
+<div class="rf-mobile-drawer" id="rfDrawer">
+  <a href="index.html" class="rf-drawer-link" data-rfpage="index">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+  <a href="translation.html" class="rf-drawer-link" data-rfpage="translation">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10"/></svg>Translate</a>
+  <a href="translation-tool.html" class="rf-drawer-link" data-rfpage="translation-tool">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6m-7 0 6-6 2-3M2 5h12M7 2h1m15 20-5-10-5 10M14 18h6"/></svg>Translate Tool</a>
+  <a href="seo-tool.html" class="rf-drawer-link" data-rfpage="seo-tool">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>SEO</a>
+  <a href="offer-generator.html" class="rf-drawer-link" data-rfpage="offer-generator">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Offers</a>
+  <a href="retailer-locator.html" class="rf-drawer-link" data-rfpage="retailer-locator">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Retailers</a>
+  <button class="rf-drawer-link" id="rfDrawerResources">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Docs</button>
+  <button class="rf-drawer-link" id="rfDrawerEmails">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>Mails</button>
+  <a href="login.html" class="rf-drawer-link" data-rfpage="admin" style="color:rgba(138,142,156,0.42);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Admin</a>
+</div>
+
+
+<script>
+// ═══ REFFINE SHARED NAV JS ═══
+(function(){
+  var isIndex = (location.pathname.split('/').pop()||'index.html') === 'index.html' ||
+                (location.pathname.split('/').pop()||'') === '';
+
+  // Mark active page
+  var page = (location.pathname.split('/').pop()||'index.html').replace('.html','') || 'index';
+  document.querySelectorAll('[data-rfpage]').forEach(function(el){
+    if(el.getAttribute('data-rfpage') === page) el.classList.add('rf-active');
+  });
+
+  // Resources + Emails buttons
+  function handleResourcesClick(){ if(isIndex){ showMode && showMode('important'); } else { location.href='index.html#resources'; } }
+  function handleEmailsClick()   { if(isIndex){ showMode && showMode('emails');    } else { location.href='index.html#emails';    } }
+
+  document.getElementById('rfBtnResources') && document.getElementById('rfBtnResources').addEventListener('click', handleResourcesClick);
+  document.getElementById('rfBtnEmails')    && document.getElementById('rfBtnEmails').addEventListener('click', handleEmailsClick);
+  document.getElementById('rfDrawerResources') && document.getElementById('rfDrawerResources').addEventListener('click', handleResourcesClick);
+  document.getElementById('rfDrawerEmails')    && document.getElementById('rfDrawerEmails').addEventListener('click', handleEmailsClick);
+
+  // Hamburger
+  var btn = document.getElementById('rfHamburger');
+  var drawer = document.getElementById('rfDrawer');
+  if(btn && drawer){
+    btn.addEventListener('click', function(){
+      var open = drawer.classList.toggle('open'); btn.classList.toggle('open', open);
+    });
+    document.addEventListener('click', function(e){
+      if(!btn.contains(e.target)&&!drawer.contains(e.target)){ drawer.classList.remove('open'); btn.classList.remove('open'); }
+    });
+  }
+
+  // Clocks
+  function getTimeIn(tz){
+    try { return new Date(new Date().toLocaleString('en-US',{timeZone:tz,hour12:false,year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'})); }
+    catch(e){ return new Date(); }
+  }
+  function drawClock(id,tz,textId){
+    var c=document.getElementById(id); if(!c)return;
+    var ctx=c.getContext('2d'),W=c.width,CX=W/2,CY=W/2,R=W/2-1;
+    ctx.clearRect(0,0,W,W);
+    var t=getTimeIn(tz),sec=t.getSeconds(),min=t.getMinutes(),hr=t.getHours()%12,ms=t.getMilliseconds();
+    ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fillStyle='#1c1f28';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
+    for(var i=0;i<12;i++){var a=(i/12)*Math.PI*2-Math.PI/2;ctx.beginPath();ctx.moveTo(CX+Math.cos(a)*(R-2),CY+Math.sin(a)*(R-2));ctx.lineTo(CX+Math.cos(a)*(R-5),CY+Math.sin(a)*(R-5));ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
+    ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(((hr+min/60)/12)*Math.PI*2-Math.PI/2)*(R*0.45),CY+Math.sin(((hr+min/60)/12)*Math.PI*2-Math.PI/2)*(R*0.45));ctx.strokeStyle='#eceef2';ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(((min+sec/60)/60)*Math.PI*2-Math.PI/2)*(R*0.62),CY+Math.sin(((min+sec/60)/60)*Math.PI*2-Math.PI/2)*(R*0.62));ctx.strokeStyle='rgba(236,238,242,0.75)';ctx.lineWidth=1.5;ctx.stroke();
+    var sA=((sec+ms/1000)/60)*Math.PI*2-Math.PI/2;
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(sA)*(R*0.7),CY+Math.sin(sA)*(R*0.7));ctx.strokeStyle='#00d084';ctx.lineWidth=1;ctx.shadowColor='#00d084';ctx.shadowBlur=3;ctx.stroke();ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(CX,CY,2,0,Math.PI*2);ctx.fillStyle='#eceef2';ctx.fill();
+    var el=document.getElementById(textId);
+    if(el) el.textContent=String(t.getHours()).padStart(2,'0')+':'+String(min).padStart(2,'0');
+  }
+  function tick(){ drawClock('rfClockDubai','Asia/Dubai','rfClockTimeDubai'); drawClock('rfClockWarsaw','Europe/Warsaw','rfClockTimeWarsaw'); requestAnimationFrame(tick); }
+  tick();
+
+  // Countdown (Date.UTC based — timezone-safe)
+  function runCountdowns(){
+    var nowMs=Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    function until(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cU=cW-off;
+        if(dow!==null&&new Date(cW).getUTCDay()!==dow) continue;
+        if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function untilDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dW).getUTCDay()===4;
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cU=cW-off; if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function fmt(ms){
+      if(ms<=0) return 'NOW';
+      var s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sc=s%60;
+      function p(n){return String(n).padStart(2,'0');}
+      return d>0 ? d+'d:'+p(h)+'h:'+p(m)+'m' : p(h)+'h:'+p(m)+'m:'+p(sc)+'s';
+    }
+    function set(id,ms){
+      var el=document.getElementById(id); if(!el) return;
+      var t=fmt(ms); el.textContent=t;
+      el.className='rf-meeting-countdown'+(t==='NOW'?' now':ms<30*60*1000?' soon':'');
+    }
+    set('rfWeeklyCountdown', until(13,0,1));
+    set('rfDailyCountdown',  untilDaily());
+    set('rfOffersCountdown', until(8,0,4));
+  }
+  runCountdowns();
+  setInterval(runCountdowns,1000);
+
+})();
+/* ─── MEETING NOTIFICATIONS ─── */
+(function(){
+  var DAILY_NORMAL = 'https://meet.google.com/pgy-nkum-gic';
+  var DAILY_THU    = 'https://meet.google.com/hxe-gzax-sre';
+
+  /* Update daily card href based on whether next daily is Thu or not */
+  function updateDailyLink(){
+    var nowMs = Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    var isThu=false;
+    for(var i=0;i<=7;i++){
+      var b=new Date(wNowMs);
+      var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+      var cThu=new Date(dW).getUTCDay()===4;
+      var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,cThu?30:45,0);
+      var cU=cW-off;
+      if(cU>nowMs){ isThu=cThu; break; }
+    }
+    var link=isThu?DAILY_THU:DAILY_NORMAL;
+    var cards=document.querySelectorAll('#rfDailyCardLink, #rfDailyMobileCard');
+    cards.forEach(function(el){ el.href=link; });
+  }
+  updateDailyLink();
+  setInterval(updateDailyLink, 60000);
+
+  /* ── Browser Notifications: 1-minute warning before each call ── */
+  var _notified = {};
+
+  var CALLS = [
+    { id:'weekly', name:'Weekly Call',  link:'https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d' },
+    { id:'daily',  name:'Daily Call',   link:null },  // link resolved dynamically
+    { id:'offers', name:'Offers Call',  link:'https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d' },
+  ];
+
+  function requestPermission(){
+    if(!('Notification' in window)) return;
+    if(Notification.permission==='default'){
+      Notification.requestPermission();
+    }
+  }
+  /* Ask for permission on first user interaction */
+  document.addEventListener('click', requestPermission, {once:true});
+
+  function getMsUntilCall(callId){
+    var nowMs=Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    function until(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cU=cW-off;
+        if(dow!==null&&new Date(cW).getUTCDay()!==dow) continue;
+        if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function untilDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dW).getUTCDay()===4;
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cU=cW-off; if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    if(callId==='weekly') return until(13,0,1);
+    if(callId==='daily')  return untilDaily();
+    if(callId==='offers') return until(8,0,4);
+    return 86400000;
+  }
+
+  function getDailyLink(){
+    var el=document.getElementById('rfDailyCardLink');
+    return el ? el.href : DAILY_NORMAL;
+  }
+
+  function fireNotification(call){
+    if(!('Notification' in window)||Notification.permission!=='granted') return;
+    var link=call.id==='daily'?getDailyLink():call.link;
+    var n=new Notification('📞 '+call.name+' starts in 1 minute', {
+      body: 'Click to join the call now',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%2300d084"/><text x="16" y="21" text-anchor="middle" font-size="16">📞</text></svg>',
+      requireInteraction: false,
+      tag: call.id
+    });
+    n.onclick=function(){ window.open(link,'_blank'); n.close(); };
+    setTimeout(function(){ n.close(); }, 15000);
+  }
+
+  function checkNotifications(){
+    var nowMs=Date.now();
+    /* Build a key based on current date+hour so notification fires once per occurrence */
+    var dayKey = new Date(nowMs).toISOString().slice(0,13);
+    CALLS.forEach(function(call){
+      var ms=getMsUntilCall(call.id);
+      var key=call.id+':'+dayKey;
+      /* Fire when 55–65 seconds remain (window to catch the 1-min mark) */
+      if(ms>55000&&ms<=65000&&!_notified[key]){
+        _notified[key]=true;
+        fireNotification(call);
+      }
+      /* Clean up old keys to avoid memory leak */
+      if(ms>120000) delete _notified[call.id+':'+new Date(nowMs-3600000).toISOString().slice(0,13)];
+    });
+  }
+
+  setInterval(checkNotifications, 5000);
+})();
+
+/* ─── THEME TOGGLE ─── */
+(function(){
+  var STORE = 'rf_theme';
+  function applyTheme(t){ document.body.classList.toggle('rf-light', t==='light'); try{ localStorage.setItem(STORE, t); }catch(e){} }
+  try{ var saved = localStorage.getItem(STORE) || 'dark'; } catch(e){ var saved = 'dark'; }
+  applyTheme(saved);
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('rfThemeBtn');
+    if(btn){ btn.addEventListener('click', function(){
+      applyTheme(document.body.classList.contains('rf-light') ? 'dark' : 'light');
+    }); }
+  });
+})();
+
+</script>
+
+
+<script>
+// ═══ SHARED CLOCK + COUNTDOWN (injected on all pages) ═══
+(function(){
+
+function getTimeIn(tz){
+  try {
+    return new Date(new Date().toLocaleString('en-US',{timeZone:tz,hour12:false,
+      year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'}));
+  } catch(e){ return new Date(); }
+}
+
+function drawSmallClock(canvasId,tz,textId){
+  var canvas=document.getElementById(canvasId); if(!canvas) return;
+  var ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,CX=W/2,CY=H/2,R=W/2-1;
+  ctx.clearRect(0,0,W,H);
+  var now=getTimeIn(tz),sec=now.getSeconds(),min=now.getMinutes(),hr=now.getHours()%12,ms=now.getMilliseconds();
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fillStyle='#1c1f28';ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
+  for(var i=0;i<12;i++){var a=(i/12)*Math.PI*2-Math.PI/2;ctx.beginPath();ctx.moveTo(CX+Math.cos(a)*(R-2.5),CY+Math.sin(a)*(R-2.5));ctx.lineTo(CX+Math.cos(a)*(R-5),CY+Math.sin(a)*(R-5));ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
+  ctx.lineCap='round';
+  var hA=((hr+min/60)/12)*Math.PI*2-Math.PI/2;
+  ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(hA)*(R*0.45),CY+Math.sin(hA)*(R*0.45));ctx.strokeStyle='#eceef2';ctx.lineWidth=2;ctx.stroke();
+  var mA=((min+sec/60)/60)*Math.PI*2-Math.PI/2;
+  ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(mA)*(R*0.65),CY+Math.sin(mA)*(R*0.65));ctx.strokeStyle='rgba(236,238,242,0.75)';ctx.lineWidth=1.5;ctx.stroke();
+  var sA=((sec+ms/1000)/60)*Math.PI*2-Math.PI/2;
+  ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(sA)*(R*0.72),CY+Math.sin(sA)*(R*0.72));ctx.strokeStyle='#00d084';ctx.lineWidth=1;ctx.shadowColor='#00d084';ctx.shadowBlur=4;ctx.stroke();ctx.shadowBlur=0;
+  ctx.beginPath();ctx.arc(CX,CY,2,0,Math.PI*2);ctx.fillStyle='#eceef2';ctx.fill();
+  var el=document.getElementById(textId);
+  if(el) el.textContent=String(now.getHours()).padStart(2,'0')+':'+String(min).padStart(2,'0');
+}
+
+function tickClocks(){ drawSmallClock('clockDubai','Asia/Dubai','clockTimeDubai'); drawSmallClock('clockWarsaw','Europe/Warsaw','clockTimeWarsaw'); requestAnimationFrame(tickClocks); }
+tickClocks();
+
+  function updateCountdowns(){
+    var nowMs = Date.now();
+    function warsawOffsetMs(){
+      var d=new Date(nowMs);
+      var s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/);
+      if(!m) return 3600000;
+      var h=parseInt(m[4]); if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6]) - nowMs;
+    }
+    var offMs=warsawOffsetMs();
+    var wNowMs=nowMs+offMs;
+    function msUntil(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cWMs=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cUTC=cWMs-offMs;
+        if(dow!==null&&new Date(cWMs).getUTCDay()!==dow) continue;
+        if(cUTC>nowMs) return cUTC-nowMs;
+      }
+      return 86400000;
+    }
+    function msDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dWMs=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dWMs).getUTCDay()===4;
+        var cWMs=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cUTC=cWMs-offMs;
+        if(cUTC>nowMs) return cUTC-nowMs;
+      }
+      return 86400000;
+    }
+    function fmt(ms){
+      if(ms<=0) return 'NOW';
+      var s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sc=s%60;
+      function p(n){return String(n).padStart(2,'0');}
+      if(d>0) return d+'d : '+p(h)+'h : '+p(m)+'m';
+      return p(h)+'h : '+p(m)+'m : '+p(sc)+'s';
+    }
+    function apply(ms,id,cls){
+      var el=document.getElementById(id); if(!el) return;
+      var t=fmt(ms); el.textContent=t;
+      el.className=cls+(t==='NOW'?' now':ms<30*60*1000?' soon':'');
+      var card=el.closest?el.closest('.meeting-card'):null;
+      if(card) card.classList.toggle('active-meeting',t==='NOW');
+    }
+    apply(msUntil(13,0,1),'weeklyCountdown','meeting-card-countdown');
+    apply(msDaily(),'dailyCountdown','meeting-card-countdown');
+    apply(msUntil(8,0,4),'offersCountdown','meeting-card-countdown');
+  }
+  updateCountdowns();
+  setInterval(updateCountdowns,1000);
+
+})();
+</script>
+
+
+
+
+<!-- ── Sandbox / iframe warning ────────────────────────────────────── -->
+<div id="sandbox-warning" style="display:none; position:fixed; top:0; left:0; right:0; z-index:999;
+  background:#92400e; color:#fef3c7; padding:10px 20px; font-size:0.75rem;
+  font-family:DM Sans,sans-serif; letter-spacing:0.05em; text-align:center; border-bottom:1px solid #b45309;">
+  &#9888; This app cannot call the Gemini API inside a preview iframe. 
+  <strong>Download the HTML file and open it directly in Chrome, Firefox, or Edge</strong> — or deploy to Netlify.
+</div>
+<script>
+  // Detect sandboxed iframe — if so, show warning
+  try {
+    if (window.self !== window.top) {
+      document.getElementById('sandbox-warning').style.display = 'block';
+    }
+  } catch(e) {
+    document.getElementById('sandbox-warning').style.display = 'block';
+  }
+</script>
+
+<!-- ── Accent line ───────────────────────────────────────────────────── -->
+<div id="accent-line"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     TOPBAR
+════════════════════════════════════════════════════════════════════ -->
+<header id="topbar">
+  <!-- Brand -->
+  <div class="topbar-brand">
+    <svg class="brand-diamond" viewBox="0 0 28 28" fill="none">
+      <polygon points="14,2 26,14 14,26 2,14" stroke="#d4af37" stroke-width="1.2" fill="none" stroke-linejoin="round"/>
+      <polygon points="14,7 21,14 14,21 7,14" stroke="#d4af37" stroke-width="0.8" fill="rgba(212,175,55,0.08)" stroke-linejoin="round"/>
+      <circle cx="14" cy="14" r="1.5" fill="#d4af37"/>
+    </svg>
+    <span class="brand-text">Reffine · Translation Hub</span>
+  </div>
+
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     MAIN
+════════════════════════════════════════════════════════════════════ -->
+<main id="main">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div class="page-eyebrow">JLR · MENA</div>
+    <h1 class="page-title" id="page-title">
+      JLR <em>Modern Luxury Translator</em>
+    </h1>
+  </div>
+
+  <!-- Mode tabs -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="tab-text" onclick="switchMode('text')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h14"/></svg>
+      Text
+    </button>
+    <button class="mode-tab" id="tab-doc" onclick="switchMode('doc')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Documents
+    </button>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────
+       TRANSLATION CONTAINER
+  ──────────────────────────────────────────────────────────── -->
+  <div class="translation-wrap">
+
+    <!-- Language bar (shared) -->
+    <div class="lang-bar">
+
+      <!-- Source language dropdown -->
+      <select class="lang-select" id="src-select" onchange="selectSource(this.value)">
+        <option value="en">English</option>
+        <option value="az">Azerbaijani — Azərbaycan dili</option>
+        <option value="ka">Georgian — ქართული</option>
+        <option value="kk">Kazakh — Қазақша</option>
+        <option value="ru">Russian — Русский</option>
+        <option value="ar">Arabic — العربية</option>
+        <option value="fr">French — Français</option>
+        <option value="hy">Armenian — Հայերեն</option>
+        <option value="ku-kmr">Kurdish (Kurmanji) — Kurdî</option>
+        <option value="ku-ckb">Kurdish (Sorani) — کوردی</option>
+      </select>
+
+      <!-- Swap button -->
+      <button class="swap-btn" onclick="swapLanguages()" title="Swap languages">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+        </svg>
+      </button>
+
+      <!-- Target language dropdown -->
+      <select class="lang-select" id="tgt-select" onchange="selectTarget(this.value)">
+        <option value="en">English</option>
+        <option value="az">Azerbaijani — Azərbaycan dili</option>
+        <option value="ka">Georgian — ქართული</option>
+        <option value="kk">Kazakh — Қазақша</option>
+        <option value="ru" selected>Russian — Русский</option>
+        <option value="ar">Arabic — العربية</option>
+        <option value="fr">French — Français</option>
+        <option value="hy">Armenian — Հայերეն</option>
+        <option value="ku-kmr">Kurdish (Kurmanji) — Kurdî</option>
+        <option value="ku-ckb">Kurdish (Sorani) — کوردی</option>
+      </select>
+
+    </div>
+
+    <!-- ── TEXT MODE ─────────────────────────────────────────── -->
+    <div id="mode-text">
+      <div id="text-panels">
+
+        <!-- Source panel -->
+        <div class="text-panel">
+          <textarea
+            class="panel-textarea"
+            id="source-textarea"
+            placeholder="Enter English text to translate…"
+            maxlength="8000"
+            oninput="onSourceInput()"
+            onkeydown="onSourceKeydown(event)"
+          ></textarea>
+          <span class="char-count" id="char-count">0 / 8,000</span>
+        </div>
+
+        <!-- Output panel -->
+        <div class="text-panel" style="position:relative;">
+          <div id="shimmer-overlay" class="shimmer-overlay" style="display:none;"></div>
+          <textarea
+            class="panel-textarea output-area"
+            id="output-textarea"
+            placeholder="Translation will appear here…"
+            readonly
+          ></textarea>
+        </div>
+
+      </div>
+
+      <!-- Bottom bar -->
+      <div class="text-bottom-bar">
+        <button class="btn-gold" id="translate-btn" onclick="translateText()">
+          Translate
+        </button>
+        <span style="font-size:0.6rem; color:var(--text-dim); letter-spacing:0.08em;">⌘ / Ctrl + Enter</span>
+        <button class="copy-btn" id="copy-btn" style="display:none;margin-left:auto;" onclick="copyTranslation()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+
+      <div id="text-error" style="padding:0 20px 16px; display:none;"></div>
+    </div>
+
+    <!-- ── DOCUMENT MODE ─────────────────────────────────────── -->
+    <div id="mode-doc" style="display:none;">
+      <div id="doc-body">
+
+        <!-- Left: drag & drop -->
+        <div
+          class="doc-drop-zone"
+          id="drop-zone"
+          onclick="onDropZoneClick()"
+          ondrop="onFileDrop(event)"
+          ondragover="onDragOver(event)"
+          ondragleave="onDragLeave()"
+          tabindex="0"
+          role="button"
+          onkeydown="if(event.key==='Enter') onDropZoneClick()"
+        >
+          <!-- Empty state -->
+          <div id="drop-empty">
+            <div class="cloud-wrap">
+              <svg class="cloud-svg" width="120" height="96" viewBox="0 0 120 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="60" cy="62" rx="44" ry="28" fill="rgba(212,175,55,0.07)" stroke="rgba(212,175,55,0.22)" stroke-width="1.2"/>
+                <circle cx="34" cy="56" r="18" fill="rgba(212,175,55,0.07)" stroke="rgba(212,175,55,0.22)" stroke-width="1.2"/>
+                <circle cx="78" cy="50" r="22" fill="rgba(212,175,55,0.07)" stroke="rgba(212,175,55,0.22)" stroke-width="1.2"/>
+                <circle cx="60" cy="40" r="20" fill="rgba(212,175,55,0.07)" stroke="rgba(212,175,55,0.22)" stroke-width="1.2"/>
+                <line x1="60" y1="30" x2="60" y2="62" stroke="#d4af37" stroke-width="2" stroke-linecap="round"/>
+                <polyline points="50,42 60,30 70,42" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="50" y1="65" x2="70" y2="65" stroke="#d4af37" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <p class="font-display" style="font-size:1.25rem; font-weight:300; color:var(--text); letter-spacing:0.03em;">Drag and drop</p>
+          </div>
+
+          <!-- File loaded state -->
+          <div id="drop-file" style="display:none;" class="file-card">
+            <div class="file-icon-circle">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div>
+              <p class="file-name" id="file-name-display"></p>
+              <p class="file-meta" id="file-rows-display"></p>
+            </div>
+            <button class="btn-ghost" onclick="removeFile(event)" style="font-size:0.62rem; padding:5px 12px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Remove
+            </button>
+          </div>
+        </div>
+
+        <div class="doc-divider"></div>
+
+        <!-- Right: browse / process -->
+        <div class="doc-browse-panel" id="doc-right-panel">
+
+          <!-- No file: browse UI -->
+          <div id="browse-ui">
+            <p class="font-display" style="font-size:1.1rem; font-weight:400; color:var(--text); letter-spacing:0.04em; margin-bottom:4px; text-align:center;">
+              Or choose a file
+            </p>
+            <button class="btn-gold full" onclick="triggerFilePicker()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+              Browse your files
+            </button>
+            <p style="font-size:0.64rem; color:var(--text-dim); text-align:center; line-height:1.8; letter-spacing:0.06em;">
+              Supported file types:<br/>
+              <span style="color:var(--gold-dim);">.csv</span> and
+              <span style="color:var(--gold-dim);">.xlsx</span>
+            </p>
+            <div style="width:100%; border-top:1px solid var(--border); padding-top:14px; margin-top:4px;">
+              <p style="font-size:0.6rem; color:var(--text-dim); text-align:center; letter-spacing:0.05em; line-height:1.8;">
+                Column A → source English strings<br/>
+                Column B ← translations written here
+              </p>
+            </div>
+          </div>
+
+          <!-- File loaded: process UI -->
+          <div id="process-ui" style="display:none; width:100%;">
+            <div style="text-align:center; margin-bottom:18px;">
+              <p class="font-display" style="font-size:1.1rem; font-weight:400; color:var(--text); letter-spacing:0.04em;">Ready to translate</p>
+              <p style="font-size:0.7rem; color:var(--text-muted); margin-top:4px; letter-spacing:0.06em;">
+                Translating into <span style="color:var(--gold);" id="process-lang-label">Russian</span> <span style="color:var(--text-dim);font-size:0.62rem;">(from <span id="process-src-label">English</span>)</span>
+              </p>
+            </div>
+
+            <div id="process-progress" style="display:none; width:100%; margin-bottom:14px;">
+              <div class="progress-labels">
+                <span class="progress-label">Processing strings…</span>
+                <span class="progress-pct" id="progress-pct">0%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+              </div>
+            </div>
+
+            <button class="btn-gold full" id="process-btn" onclick="processDocument()">
+              Process Document
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+
+            <div id="doc-error" style="display:none; margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Done banner (hidden until complete) -->
+      <div id="done-banner" style="display:none;">
+        <div class="done-info">
+          <div class="done-icon-ring">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <p class="done-title font-display">Translation complete</p>
+            <p class="done-sub" id="done-sub-text"></p>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn-ghost" onclick="resetDocument()">New document</button>
+          <button class="btn-gold" id="download-btn" onclick="downloadTranslation()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span id="download-btn-label">Download</span>
+          </button>
+        </div>
+      </div>
+
+      <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none;" onchange="onFileSelected(event)"/>
+    </div>
+
+  </div><!-- /translation-wrap -->
+
+
+</main>
+
+<!-- Footer -->
+<footer id="footer">
+  <div class="footer-inner">
+    <span class="footer-brand">Reffine · MENA Translation Hub</span>
+    <span class="footer-note">Powered by Groq · Llama 4 Scout (Multilingual) · Modern Luxury brand voice · Translations should receive editorial review</span>
+  </div>
+</footer>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     APPLICATION SCRIPT
+════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ── State ──────────────────────────────────────────────────────── */
+const _acfg = (function(){ try{ return JSON.parse(localStorage.getItem('rf_admin_config')||'{}'); }catch(e){return{};} })();
+const GEMINI_KEY = _acfg.groq_key || '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';
+let currentMode   = 'text';
+let sourceLang    = 'en';
+let targetLang    = 'ru';
+let uploadedFile  = null;
+let translatedData = null;
+let cancelFlag    = false;
+
+const LANG_NAMES = {
+  en: 'English', az: 'Azerbaijani', ka: 'Georgian', kk: 'Kazakh',
+  ru: 'Russian', ar: 'Arabic', fr: 'French', hy: 'Armenian',
+  'ku-kmr': 'Kurdish (Kurmanji)', 'ku-ckb': 'Kurdish (Sorani)',
+};
+const LANG_FULL = {
+  en: 'English', az: 'Azerbaijani', ka: 'Georgian', kk: 'Kazakh',
+  ru: 'Russian', ar: 'Arabic', fr: 'French', hy: 'Armenian',
+  'ku-kmr': 'Kurdish (Kurmanji)', 'ku-ckb': 'Kurdish (Sorani)',
+};
+const RTL_LANGS  = new Set(['ar','ku-ckb']);
+const MAX_ROWS   = 2000;
+const BATCH_SIZE = 30;
+
+/* Clocks removed */
+
+/* ── Mode switching ─────────────────────────────────────────────── */
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById('mode-text').style.display = mode === 'text' ? '' : 'none';
+  document.getElementById('mode-doc').style.display  = mode === 'doc'  ? '' : 'none';
+  ['text','doc'].forEach(function(m) {
+    var navEl = document.getElementById('nav-' + m);
+    var tabEl = document.getElementById('tab-' + m);
+    if(navEl) navEl.classList.toggle('active', m === mode);
+    if(tabEl) tabEl.classList.toggle('active', m === mode);
+  });
+  var titles = {
+    text: 'JLR <em>Modern Luxury Translator</em>',
+    doc:  'Document <em>Localisation</em>'
+  };
+  document.getElementById('page-title').innerHTML = titles[mode];
+}
+
+/* ── Language selection ─────────────────────────────────────────── */
+function renderDropdowns() {
+  var srcSel = document.getElementById('src-select');
+  var tgtSel = document.getElementById('tgt-select');
+  if (srcSel) srcSel.value = sourceLang;
+  if (tgtSel) tgtSel.value = targetLang;
+
+  var srcTA = document.getElementById('source-textarea');
+  if (srcTA) {
+    srcTA.style.direction = RTL_LANGS.has(sourceLang) ? 'rtl' : 'ltr';
+    srcTA.placeholder = 'Enter ' + LANG_NAMES[sourceLang] + ' text to translate\u2026';
+  }
+  var outTA = document.getElementById('output-textarea');
+  if (outTA) {
+    outTA.value = '';
+    outTA.style.direction = RTL_LANGS.has(targetLang) ? 'rtl' : 'ltr';
+    outTA.placeholder = LANG_NAMES[targetLang] + ' translation will appear here\u2026';
+  }
+  var procLabel = document.getElementById('process-lang-label');
+  if (procLabel) procLabel.textContent = LANG_NAMES[targetLang];
+  var srcLabel = document.getElementById('process-src-label');
+  if (srcLabel) srcLabel.textContent = LANG_NAMES[sourceLang];
+  var copyBtn = document.getElementById('copy-btn');
+  if (copyBtn) copyBtn.style.display = 'none';
+}
+
+function selectSource(code) {
+  if (code === targetLang) { targetLang = sourceLang; }
+  sourceLang = code;
+  renderDropdowns();
+}
+
+function selectTarget(code) {
+  if (code === sourceLang) { sourceLang = targetLang; }
+  targetLang = code;
+  renderDropdowns();
+}
+
+function swapLanguages() {
+  var srcText = document.getElementById('source-textarea').value;
+  var outText = document.getElementById('output-textarea').value;
+  var tmp = sourceLang; sourceLang = targetLang; targetLang = tmp;
+  renderDropdowns();
+  var srcTA = document.getElementById('source-textarea');
+  var outTA = document.getElementById('output-textarea');
+  if (srcTA) { srcTA.value = outText; onSourceInput(); }
+  if (outTA) { outTA.value = ''; }
+}
+
+/* ── TEXT MODE ──────────────────────────────────────────────────── */
+function onSourceInput() {
+  var src = document.getElementById('source-textarea');
+  document.getElementById('char-count').textContent =
+    src.value.length.toLocaleString() + ' / 8,000';
+}
+
+function onSourceKeydown(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    translateText();
+  }
+}
+
+async function translateText() {
+  var text = document.getElementById('source-textarea').value.trim();
+  if (!text) return;
+
+  cancelFlag = true;
+  await new Promise(function(r){ setTimeout(r, 0); });
+  cancelFlag = false;
+
+  var btn     = document.getElementById('translate-btn');
+  var out     = document.getElementById('output-textarea');
+  var errEl   = document.getElementById('text-error');
+  var shimmer = document.getElementById('shimmer-overlay');
+
+  btn.disabled = true;
+  btn.textContent = 'Translating\u2026';
+  out.value = '';
+  document.getElementById('copy-btn').style.display = 'none';
+  shimmer.style.display = 'block';
+  errEl.style.display = 'none';
+
+  try {
+    var translated = await callGemini(text, sourceLang, targetLang, false);
+    out.value = translated;
+    out.style.direction = RTL_LANGS.has(targetLang) ? 'rtl' : 'ltr';
+    document.getElementById('copy-btn').style.display = 'flex';
+  } catch(err) {
+    if (err.message === 'cancelled') return;
+    errEl.style.display = 'flex';
+    errEl.className = 'error-bar';
+    // Show multiline errors with line breaks
+    errEl.innerHTML = '';
+    err.message.split('\n').forEach(function(line, i) {
+      if (i > 0) errEl.appendChild(document.createElement('br'));
+      errEl.appendChild(document.createTextNode(line));
+    });
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Translate';
+    shimmer.style.display = 'none';
+  }
+}
+
+function copyTranslation() {
+  var text = document.getElementById('output-textarea').value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('copy-btn');
+    btn.classList.add('copied');
+    btn.textContent = 'Copied';
+    setTimeout(function() {
+      btn.classList.remove('copied');
+      btn.textContent = 'Copy';
+    }, 2000);
+  });
+}
+
+/* ── DOCUMENT MODE ──────────────────────────────────────────────── */
+function triggerFilePicker() {
+  document.getElementById('file-input').click();
+}
+function onDropZoneClick() {
+  if (!uploadedFile) triggerFilePicker();
+}
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.add('dragover');
+}
+function onDragLeave() {
+  document.getElementById('drop-zone').classList.remove('dragover');
+}
+function onFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('dragover');
+  var f = e.dataTransfer.files[0];
+  if (f) ingestFile(f);
+}
+function onFileSelected(e) {
+  var f = e.target.files[0];
+  if (f) ingestFile(f);
+  e.target.value = '';
+}
+
+async function ingestFile(rawFile) {
+  var ext = rawFile.name.split('.').pop().toLowerCase();
+  if (['csv','xlsx','xls'].indexOf(ext) === -1) {
+    alert('Only .csv and .xlsx files are supported.');
+    return;
+  }
+  try {
+    var isCsv = ext === 'csv';
+    var parsed = isCsv ? await parseCSV(rawFile) : await parseXLSX(rawFile);
+    var rows, wb, sheetName, isPhrases = false, srcCol = 0, tgtCol = 1, dataStartRow = 1;
+
+    if (isCsv) {
+      rows = parsed;
+      wb = null; sheetName = null;
+    } else {
+      // XLSX with possible multi-sheet Phrases format
+      wb = parsed.wb;
+      sheetName = parsed.sheetName;
+      rows = parsed.rows;
+      // Detect Phrases-style: look for "Phrases" sheet + headers
+      if (parsed.sheetName.toLowerCase() === 'phrases') {
+        isPhrases = true;
+        // Row 0 = colour header, Row 1 = col labels (Key / Original phrase / Translation)
+        // Data starts at row 2 (0-indexed)
+        srcCol = 1;   // Column B = original phrase
+        tgtCol = 2;   // Column C = translation
+        dataStartRow = 2;
+      }
+    }
+
+    uploadedFile = {
+      name: rawFile.name,
+      type: isCsv ? 'csv' : 'xlsx',
+      data: rows,
+      wb: wb,
+      sheetName: sheetName,
+      isPhrases: isPhrases,
+      srcCol: srcCol,
+      tgtCol: tgtCol,
+      dataStartRow: dataStartRow
+    };
+    translatedData = null;
+    var rowCount = Math.max(0, rows.length - dataStartRow);
+    document.getElementById('drop-empty').style.display = 'none';
+    document.getElementById('drop-file').style.display  = 'flex';
+    document.getElementById('file-name-display').textContent = rawFile.name;
+    document.getElementById('file-rows-display').textContent =
+      rowCount.toLocaleString() + ' row' + (rowCount !== 1 ? 's' : '') + ' detected' +
+      (uploadedFile.isPhrases ? ' — Phrases sheet' : '') +
+      (rowCount > MAX_ROWS ? ' — first 2,000 processed' : '');
+    document.getElementById('browse-ui').style.display  = 'none';
+    document.getElementById('process-ui').style.display = 'block';
+    document.getElementById('done-banner').style.display = 'none';
+    document.getElementById('process-lang-label').textContent = LANG_NAMES[targetLang];
+  } catch(err) {
+    alert('Failed to read file: ' + err.message);
+  }
+}
+
+function removeFile(e) {
+  e.stopPropagation();
+  resetDocument();
+}
+
+function resetDocument() {
+  cancelFlag = true;
+  uploadedFile   = null;
+  translatedData = null;
+  document.getElementById('drop-empty').style.display = '';
+  document.getElementById('drop-file').style.display  = 'none';
+  document.getElementById('browse-ui').style.display  = '';
+  document.getElementById('process-ui').style.display = 'none';
+  document.getElementById('done-banner').style.display = 'none';
+  document.getElementById('process-progress').style.display = 'none';
+  document.getElementById('doc-error').style.display = 'none';
+  setProgress(0);
+}
+
+function setProgress(pct) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+}
+
+async function processDocument() {
+  if (!uploadedFile) return;
+  cancelFlag = true;
+  await new Promise(function(r){ setTimeout(r, 0); });
+  cancelFlag = false;
+
+  var btn   = document.getElementById('process-btn');
+  var errEl = document.getElementById('doc-error');
+  var prog  = document.getElementById('process-progress');
+
+  btn.disabled = true;
+  btn.textContent = 'Processing\u2026';
+  prog.style.display = 'block';
+  errEl.style.display = 'none';
+  setProgress(0);
+
+  try {
+    var rows       = uploadedFile.data;
+    var srcCol     = uploadedFile.srcCol     || 0;
+    var tgtCol     = uploadedFile.tgtCol     || 1;
+    var startRow   = uploadedFile.dataStartRow || 1;
+    var isPhrases  = uploadedFile.isPhrases  || false;
+
+    // Collect source strings from the correct column, skip empty cells
+    var sourceMap = []; // { rowIdx, text }
+    for (var i = startRow; i < Math.min(rows.length, startRow + MAX_ROWS); i++) {
+      var cell = String(rows[i][srcCol] || '').trim();
+      if (cell) sourceMap.push({ rowIdx: i, text: cell });
+    }
+    if (!sourceMap.length) throw new Error('No source text found in column ' + (srcCol === 1 ? 'B' : 'A') + '.');
+
+    var texts   = sourceMap.map(function(x){ return x.text; });
+    var batches = chunkArray(texts, BATCH_SIZE);
+    var allTranslated = [];
+
+    for (var b = 0; b < batches.length; b++) {
+      if (cancelFlag) return;
+      var result = await callGemini(JSON.stringify(batches[b]), sourceLang, targetLang, true);
+      var parsed;
+      try {
+        var clean = result.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();
+        parsed = JSON.parse(clean);
+        if (!Array.isArray(parsed)) throw new Error('not array');
+      } catch(e) {
+        parsed = result.split('\n').filter(Boolean);
+      }
+      allTranslated = allTranslated.concat(parsed);
+      setProgress(Math.round(((b + 1) / batches.length) * 100));
+    }
+
+    // Build translated output: deep copy all rows, inject translations into tgtCol
+    var outputRows = rows.map(function(row) { return row.slice(); });
+
+    // For Phrases files: update the Translation column header label
+    if (isPhrases && outputRows[1] && outputRows[1][tgtCol] !== undefined) {
+      outputRows[1][tgtCol] = 'Translation (' + LANG_NAMES[targetLang] + ')';
+    }
+
+    // Write translations into tgtCol
+    for (var j = 0; j < sourceMap.length; j++) {
+      var r = sourceMap[j].rowIdx;
+      // Extend row if needed
+      while (outputRows[r].length <= tgtCol) outputRows[r].push('');
+      if (allTranslated[j] !== undefined) outputRows[r][tgtCol] = allTranslated[j];
+    }
+    translatedData = outputRows;
+
+    document.getElementById('done-banner').style.display = 'flex';
+    document.getElementById('done-sub-text').textContent =
+      sourceMap.length + ' strings translated into ' +
+      LANG_NAMES[targetLang] + ' — ' + uploadedFile.name +
+      (isPhrases ? ' (Phrases sheet, Column C)' : '');
+    document.getElementById('download-btn-label').textContent = 'Download .' + uploadedFile.type;
+
+  } catch(err) {
+    if (err.message === 'cancelled') return;
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Process Document';
+    prog.style.display = 'none';
+  }
+}
+
+function downloadTranslation() {
+  if (!translatedData || !uploadedFile) return;
+  var stem    = uploadedFile.name.replace(/\.[^.]+$/, '');
+  var lang    = targetLang.replace('-','');
+  var outName = stem + '_' + lang + '_translated.' + uploadedFile.type;
+
+  try {
+    if (uploadedFile.type === 'csv') {
+      var csv  = Papa.unparse(translatedData);
+      triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), outName);
+    } else {
+      var wb = uploadedFile.wb;
+      if (wb && uploadedFile.sheetName) {
+        // Replace only the target sheet's data
+        var newWs = XLSX.utils.aoa_to_sheet(translatedData);
+        wb.Sheets[uploadedFile.sheetName] = newWs;
+      } else {
+        // Fallback: create new workbook with single sheet
+        wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.aoa_to_sheet(translatedData);
+        XLSX.utils.book_append_sheet(wb, ws, uploadedFile.sheetName || 'Sheet1');
+      }
+      var buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      triggerDownload(new Blob([buf], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }), outName);
+    }
+  } catch(e) {
+    alert('Download failed: ' + e.message);
+    console.error('downloadTranslation error:', e);
+  }
+}
+
+function triggerDownload(blob, filename) {
+  var url = URL.createObjectURL(blob);
+  var a   = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function() {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 200);
+}
+
+/* ── File parsing ───────────────────────────────────────────────── */
+function parseCSV(file) {
+  return new Promise(function(resolve, reject) {
+    Papa.parse(file, {
+      complete: function(r) { resolve(r.data); },
+      error:    function(e) { reject(new Error(e.message)); },
+      skipEmptyLines: false,
+    });
+  });
+}
+
+function parseXLSX(file) {
+  return file.arrayBuffer().then(function(buf) {
+    var wb = XLSX.read(buf, { type: 'array' });
+    // Try to find a sheet called "Phrases" (case-insensitive), fall back to first sheet
+    var sheetName = wb.SheetNames[0];
+    for (var i = 0; i < wb.SheetNames.length; i++) {
+      if (wb.SheetNames[i].toLowerCase() === 'phrases') {
+        sheetName = wb.SheetNames[i];
+        break;
+      }
+    }
+    var ws = wb.Sheets[sheetName];
+
+    // ── Fix: trim the sheet ref to actual data before parsing ──
+    // sheet_to_json with defval:'' expands to the full Excel grid (1M+ rows)
+    // Clamp !ref to actual used range by scanning for the last non-empty cell
+    if (ws['!ref']) {
+      var range = XLSX.utils.decode_range(ws['!ref']);
+      var lastRow = 0;
+      Object.keys(ws).forEach(function(key) {
+        if (key[0] === '!') return;
+        var cell = XLSX.utils.decode_cell(key);
+        var v = ws[key].v;
+        if (v !== undefined && v !== null && v !== '') {
+          if (cell.r > lastRow) lastRow = cell.r;
+        }
+      });
+      range.e.r = lastRow;
+      ws['!ref'] = XLSX.utils.encode_range(range);
+    }
+
+    var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+    // Trim trailing fully-empty rows
+    while (rows.length > 0 && rows[rows.length - 1].every(function(c){ return c === '' || c === null || c === undefined; })) {
+      rows.pop();
+    }
+
+    return { wb: wb, sheetName: sheetName, rows: rows };
+  });
+}
+
+/* ── Groq API (free tier — groq.com) ────────────────────────────── */
+function buildPrompt(fromLang, toLang, content, batchMode) {
+  var system = 'You are a professional brand localisation expert for Modern Luxury automotive.'
+    + ' Translate from ' + fromLang + ' to ' + toLang + '.'
+    + ' Preserve HTML tags exactly as-is. Do not translate proper nouns (Range Rover, Jaguar, Land Rover, SV, Kvadrat, Ultrafabric).'
+    + ' Use an elegant, refined, sophisticated tone — never salesy or aggressive.';
+  if (batchMode) {
+    return {
+      system: system,
+      user: 'INPUT is a JSON array of strings. OUTPUT must be ONLY a valid JSON array of translated strings in the exact same order. No markdown fences, no explanation, no preamble.\n\n' + content
+    };
+  }
+  return {
+    system: system,
+    user: 'OUTPUT must be ONLY the translated text. No preamble, no explanation, no quotes.\n\n' + content
+  };
+}
+
+// Groq models — free tier, ordered by quality
+var GROQ_MODELS = [
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+  'meta-llama/llama-4-scout-17b-16e-instruct',
+];
+
+async function callGemini(content, fromCode, toCode, batchMode) {
+  // Note: function kept as callGemini for compatibility, now calls Groq
+  var fromName = LANG_FULL[fromCode] || fromCode;
+  var toName   = LANG_FULL[toCode]   || toCode;
+  var prompt   = buildPrompt(fromName, toName, content, batchMode);
+
+  if (!GEMINI_KEY || GEMINI_KEY === 'YOUR_GROQ_API_KEY_HERE') {
+    throw new Error('No API key set. Please add your Groq API key (get one free at console.groq.com).');
+  }
+
+  var errors = [];
+
+  for (var i = 0; i < GROQ_MODELS.length; i++) {
+    try {
+      var res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + GEMINI_KEY
+        },
+        body: JSON.stringify({
+          model: GROQ_MODELS[i],
+          messages: [
+            { role: 'system', content: prompt.system },
+            { role: 'user',   content: prompt.user }
+          ],
+          temperature: 0.2,
+          max_tokens: 8192
+        })
+      });
+
+      var json = await res.json();
+
+      if (!res.ok) {
+        var msg = (json.error && json.error.message) ? json.error.message : ('HTTP ' + res.status);
+        errors.push(GROQ_MODELS[i] + ': ' + msg);
+        continue;
+      }
+
+      var result = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
+      if (result) return result.trim();
+      errors.push(GROQ_MODELS[i] + ': empty response');
+
+    } catch(e) {
+      if (e.name === 'TypeError') {
+        throw new Error('Network error — open from a deployed URL (Netlify/Vercel), not a local file.');
+      }
+      errors.push(GROQ_MODELS[i] + ': ' + e.message);
+    }
+  }
+
+  throw new Error('All models failed:\n' + errors.join('\n'));
+}
+
+/* ── Utilities ──────────────────────────────────────────────────── */
+function chunkArray(arr, size) {
+  var out = [];
+  for (var i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+</script>
+
+
+<!-- ═══ REFFINE SHARED FOOTER ═══ -->
+<footer class="rf-footer">
+  <div class="rf-footer-inner">
+    <span class="rf-footer-brand">Reffine &middot; MENA &middot; JLR Hub</span>
+    <div class="rf-footer-links">
+      <a href="index.html"            class="rf-footer-link" data-rfpage="index">Dashboard</a>
+      <a href="translation.html"      class="rf-footer-link" data-rfpage="translation">Translate</a>
+      <a href="translation-tool.html" class="rf-footer-link" data-rfpage="translation-tool">Translate Tool</a>
+      <a href="seo-tool.html"         class="rf-footer-link" data-rfpage="seo-tool">SEO</a>
+      <a href="offer-generator.html"  class="rf-footer-link" data-rfpage="offer-generator">Offers</a>
+      <a href="retailer-locator.html" class="rf-footer-link" data-rfpage="retailer-locator">Retailers</a>
+      <a href="login.html"            class="rf-footer-link" data-rfpage="admin" style="color:rgba(138,142,156,0.35);">Admin</a>
+    </div>
+  </div>
+</footer>
+<script>
+(function(){
+  var p=(location.pathname.split('/').pop()||'index.html').replace('.html','')||'index';
+  document.querySelectorAll('.rf-footer-link[data-rfpage]').forEach(function(a){
+    if(a.getAttribute('data-rfpage')===p) a.classList.add('rf-active');
+  });
+})();
+</script>
+
+
+</body>
+</html>

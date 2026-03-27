@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Retailer Locator Editor — Reffine MENA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg:     #0a0b0d;
+  --s1:     #111316;
+  --s2:     #16181c;
+  --s3:     #1c1f24;
+  --line:   rgba(255,255,255,.07);
+  --line2:  rgba(255,255,255,.12);
+  --text:   #f0f0f0;
+  --muted:  #7a808e;
+  --accent: #00d084;
+  --a-bg:   rgba(0,208,132,.09);
+  --a-brd:  rgba(0,208,132,.25);
+  --warn:   #e8973a;
+  --w-bg:   rgba(232,151,58,.12);
+  --danger: #e8424a;
+  --d-bg:   rgba(232,66,74,.12);
+  --blue:   #5b8dee;
+  --b-bg:   rgba(91,141,238,.1);
+  --purple: #9b7ee8;
+  --p-bg:   rgba(155,126,232,.1);
+  --gold:   #c9a96e;
+  --g-bg:   rgba(201,169,110,.12);
+
+  /* Brand accent — changes with brand selection */
+  --brand:  #00d084;
+  --brand-bg: rgba(0,208,132,.1);
+  --brand-brd: rgba(0,208,132,.28);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:14px;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* ── SHARED NAV ── */
+.rf-topnav{position:fixed;top:0;left:0;right:0;height:60px;background:rgba(10,11,13,.96);border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;padding:0 1.5rem;gap:.75rem;z-index:9999;backdrop-filter:blur(20px);font-family:'Inter',sans-serif;box-sizing:border-box;overflow:hidden;}
+.rf-nav-logo{display:flex;flex-direction:column;gap:1px;line-height:1.1;text-decoration:none;flex-shrink:0;white-space:nowrap;}
+.rf-nav-logo .rf-logo-main{font-size:.82rem;font-weight:700;letter-spacing:.12em;color:#f5f5f5;}
+.rf-nav-logo .rf-logo-sub{font-size:.48rem;font-weight:500;letter-spacing:.18em;color:rgba(138,142,156,.45);text-transform:uppercase;}
+.rf-dot{color:#00d084;}
+.rf-topnav-divider{width:1px;height:20px;background:rgba(255,255,255,.08);flex-shrink:0;}
+.rf-nav-right{display:flex;align-items:center;gap:2px;flex-shrink:0;}
+.rf-navlink{padding:.3rem .65rem;border-radius:4px;font-size:.66rem;font-weight:600;letter-spacing:.04em;color:#8a8e9c;text-decoration:none;transition:all .15s;white-space:nowrap;border:1px solid transparent;cursor:pointer;background:none;font-family:'Inter',sans-serif;}
+.rf-navlink:hover{color:#f5f5f5;background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.06);}
+.rf-navlink.rf-active{color:#00d084;background:rgba(0,208,132,.08);border-color:rgba(0,208,132,.18);}
+.rf-nav-clock{display:flex;align-items:center;gap:.4rem;flex-shrink:0;}
+.rf-nav-clock canvas{border-radius:50%;}
+.rf-clock-city{font-size:.52rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(138,142,156,.5);display:block;}
+.rf-clock-time{font-size:.75rem;font-weight:600;color:#f5f5f5;letter-spacing:.05em;font-variant-numeric:tabular-nums;display:block;}
+.rf-meeting-cards{display:flex;gap:.4rem;align-items:stretch;flex-shrink:0;}
+.rf-meeting-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.28rem .6rem;display:flex;flex-direction:column;gap:0;text-decoration:none;transition:border-color .15s;min-width:100px;cursor:pointer;}
+.rf-meeting-card:hover{border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.05);}
+.rf-meeting-title{font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a8e9c;white-space:nowrap;}
+.rf-meeting-countdown{font-size:.72rem;font-weight:700;color:#f5f5f5;letter-spacing:.03em;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.rf-meeting-countdown.soon{color:#00d084;}
+.rf-meeting-countdown.now{color:#e8424a;animation:rf-pulse 1s infinite;}
+.rf-meeting-sub{font-size:.48rem;color:rgba(138,142,156,.5);white-space:nowrap;}
+@keyframes rf-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.rf-right-section{display:flex;align-items:center;gap:.75rem;margin-left:auto;flex-shrink:0;}
+.rf-hamburger{display:none;background:none;border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:6px 8px;cursor:pointer;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;gap:4px;}
+.rf-hamburger span{display:block;width:18px;height:1.5px;background:#f5f5f5;border-radius:2px;transition:all .25s;}
+.rf-hamburger.open span:nth-child(1){transform:translateY(5.5px) rotate(45deg);}
+.rf-hamburger.open span:nth-child(2){opacity:0;}
+.rf-hamburger.open span:nth-child(3){transform:translateY(-5.5px) rotate(-45deg);}
+.rf-mobile-drawer{display:none;position:fixed;top:60px;left:0;right:0;z-index:9998;background:rgba(10,11,13,.98);border-bottom:1px solid rgba(255,255,255,.09);padding:.75rem 1.5rem 1rem;flex-direction:column;gap:2px;backdrop-filter:blur(20px);}
+.rf-mobile-drawer.open{display:flex;}
+.rf-drawer-link{padding:.65rem .75rem;border-radius:5px;font-size:.78rem;font-weight:600;color:#8a8e9c;text-decoration:none;border:1px solid transparent;display:flex;align-items:center;gap:8px;background:none;font-family:'Inter',sans-serif;cursor:pointer;}
+.rf-drawer-link:hover{color:#f5f5f5;background:rgba(255,255,255,.04);}
+.rf-drawer-link.rf-active{color:#00d084;background:rgba(0,208,132,.07);border-color:rgba(0,208,132,.15);}
+.rf-theme-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#8a8e9c;cursor:pointer;transition:all .15s;padding:0;}
+.rf-theme-btn:hover{background:rgba(255,255,255,.1);color:#f5f5f5;border-color:rgba(255,255,255,.2);}
+body.rf-light .rf-theme-btn{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#52596b;}
+body.rf-light .rf-theme-btn:hover{background:rgba(0,0,0,.1);color:#0f1117;}
+.rf-theme-btn .rf-icon-sun{display:none;}
+.rf-theme-btn .rf-icon-moon{display:block;}
+body.rf-light .rf-theme-btn .rf-icon-sun{display:block;}
+body.rf-light .rf-theme-btn .rf-icon-moon{display:none;}
+@media(max-width:1200px){.rf-right-section{display:none!important;}}
+@media(max-width:900px){.rf-nav-right{display:none!important;}.rf-hamburger{display:flex!important;}}
+
+/* ── LAYOUT ── */
+.app{display:flex;flex:1;overflow:hidden;margin-top:60px;height:calc(100vh - 60px);}
+
+/* ── SIDEBAR ── */
+.sb{width:290px;min-width:290px;background:var(--s1);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden;}
+.sb-head{padding:11px 13px;border-bottom:1px solid var(--line);flex-shrink:0;}
+.sb-q{width:100%;background:var(--s2);border:1px solid var(--line2);border-radius:6px;color:var(--text);font-family:inherit;font-size:12.5px;padding:6px 10px;outline:none;}
+.sb-q:focus{border-color:var(--accent);}
+.sb-q::placeholder{color:var(--muted);}
+.sb-chips{display:flex;gap:4px;margin-top:7px;flex-wrap:wrap;}
+.chip{padding:2px 9px;border-radius:100px;font-size:10.5px;font-weight:600;border:1px solid var(--line2);background:none;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .12s;}
+.chip:hover{color:var(--text);}
+.chip.on{background:var(--a-bg);border-color:var(--a-brd);color:var(--accent);}
+.sb-list{flex:1;overflow-y:auto;}
+.sb-grp{padding:6px 13px 3px;font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1;}
+.sb-row{display:flex;align-items:center;gap:9px;padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--line);transition:background .1s;}
+.sb-row:hover{background:var(--s2);}
+.sb-row.on{background:var(--s2);border-left:3px solid var(--accent);padding-left:10px;}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sd-sales{background:var(--accent);}
+.sd-service{background:var(--blue);}
+.sd-mixed{background:var(--warn);}
+.sb-info{flex:1;min-width:0;}
+.sb-name{font-size:12.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-sub{font-size:11px;color:var(--muted);}
+.sb-mod{width:5px;height:5px;border-radius:50%;background:var(--warn);flex-shrink:0;display:none;}
+.sb-add{width:100%;padding:10px 13px;background:none;border:none;border-top:1px solid var(--line);color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .15s;}
+.sb-add:hover{color:var(--accent);background:var(--a-bg);}
+.sb-foot{padding:9px 13px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:11px;color:var(--muted);flex-shrink:0;font-family:'IBM Plex Mono',monospace;}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ══════════════════════════════════════════
+   LOAD SCREEN
+══════════════════════════════════════════ */
+.load-screen{flex:1;overflow-y:auto;background:var(--bg);}
+.load-inner{max-width:980px;margin:0 auto;padding:28px 24px 60px;}
+
+.load-header{text-align:center;margin-bottom:24px;}
+.load-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.load-sub{font-size:12px;color:var(--muted);}
+
+/* Brand selector tabs */
+.brand-tabs{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:24px;}
+.brand-tab{display:flex;align-items:center;gap:8px;padding:8px 20px;border-radius:8px;border:1px solid var(--line2);background:var(--s1);color:var(--muted);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .18s;letter-spacing:.04em;}
+.brand-tab:hover{color:var(--text);border-color:var(--line2);background:var(--s2);}
+.brand-tab .bd{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.brand-tab.bt-lr  .bd{background:#00d084;}
+.brand-tab.bt-rr  .bd{background:#c9a96e;}
+.brand-tab.bt-jag .bd{background:#e8424a;}
+.brand-tab.active-lr  {border-color:rgba(0,208,132,.4);background:rgba(0,208,132,.08);color:#00d084;}
+.brand-tab.active-rr  {border-color:rgba(201,169,110,.4);background:rgba(201,169,110,.08);color:#c9a96e;}
+.brand-tab.active-jag {border-color:rgba(232,66,74,.4);background:rgba(232,66,74,.08);color:#e8424a;}
+
+/* Week start legend */
+.week-legend{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:18px;}
+.wl-item{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted);}
+.wl-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.wl-mon{background:var(--accent);}
+.wl-sun{background:var(--warn);}
+
+/* Country grid */
+.country-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:28px;}
+.country-card{background:var(--s1);border:1px solid var(--line);border-radius:10px;overflow:hidden;transition:border-color .15s;}
+.country-card:hover{border-color:var(--line2);}
+
+.cc-head{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);}
+.cc-flag{font-size:18px;line-height:1;flex-shrink:0;}
+.cc-name{font-size:11.5px;font-weight:700;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cc-week{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-left:auto;}
+.cc-week-mon{background:var(--accent);}
+.cc-week-sun{background:var(--warn);}
+
+.cc-langs{display:flex;gap:4px;padding:8px 12px;flex-wrap:wrap;}
+
+/* Language buttons — colored by brand */
+.lang-btn{padding:4px 10px;border-radius:5px;font-size:10.5px;font-weight:700;border:1px solid var(--line2);background:var(--s2);color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:4px;letter-spacing:.04em;}
+.lang-btn:hover{color:var(--text);border-color:var(--line2);background:var(--s3);}
+.lang-btn.loading{opacity:.45;pointer-events:none;}
+.lang-btn.loaded{border-color:rgba(0,208,132,.4);color:var(--accent);background:var(--a-bg);}
+
+/* LR lang button hovers */
+body.brand-lr .lang-btn:hover{border-color:rgba(0,208,132,.4);color:#00d084;background:rgba(0,208,132,.08);}
+/* RR lang button hovers */
+body.brand-rr .lang-btn:hover{border-color:rgba(201,169,110,.4);color:#c9a96e;background:rgba(201,169,110,.08);}
+/* JAG lang button hovers */
+body.brand-jag .lang-btn:hover{border-color:rgba(232,66,74,.4);color:#e8424a;background:rgba(232,66,74,.08);}
+
+/* Divider */
+.load-divider{display:flex;align-items:center;gap:12px;margin:4px 0 20px;}
+.load-divider span{font-size:11px;color:var(--muted);flex-shrink:0;}
+.load-divider::before,.load-divider::after{content:'';flex:1;height:1px;background:var(--line);}
+
+/* Drag-drop zone */
+.up-zone{border:2px dashed var(--line2);border-radius:10px;padding:32px 48px;text-align:center;cursor:pointer;transition:all .2s;background:var(--s1);}
+.up-zone:hover,.up-zone.drag{border-color:var(--accent);background:var(--a-bg);}
+.up-zone h2{font-size:14px;font-weight:700;margin-top:8px;}
+.up-zone p{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.6;}
+
+/* Empty state */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);}
+.empty h3{font-size:15px;font-weight:600;color:var(--text);}
+.empty p{font-size:12px;}
+
+/* ── TOOLBAR ── */
+.tbar{height:46px;background:var(--s1);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:8px;flex-shrink:0;}
+.tbar-name{font-size:13px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tbar-id{font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+.mod-pill{padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700;background:var(--w-bg);color:var(--warn);border:1px solid rgba(232,151,58,.3);display:none;white-space:nowrap;}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;}
+.c-inner{max-width:720px;margin:0 auto;padding:18px 22px 60px;}
+
+/* ── FIELDS ── */
+.fl{margin-bottom:10px;}
+.fl-lbl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-bottom:4px;}
+.fi{width:100%;background:var(--s2);border:1px solid var(--line2);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;padding:8px 11px;outline:none;transition:border-color .15s;}
+.fi:focus{border-color:var(--accent);background:rgba(0,208,132,.02);}
+.fi::placeholder{color:var(--muted);opacity:.5;}
+textarea.fi{resize:vertical;min-height:52px;}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:12px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:9px;}
+
+/* ── SECTION DIVIDER ── */
+.sdiv{height:1px;background:var(--line);margin:18px 0 14px;}
+.slbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px;margin-bottom:13px;}
+.slbl::after{content:'';flex:1;height:1px;background:var(--line);}
+
+/* ── HOURS BOX ── */
+.hrs-box{background:var(--s1);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+.day-row{display:flex;align-items:flex-start;padding:9px 14px;border-bottom:1px solid var(--line);gap:11px;}
+.day-row:last-child{border-bottom:none;}
+.day-row.today .d-name{color:var(--accent);}
+.d-name{font-size:12px;font-weight:700;width:36px;flex-shrink:0;padding-top:5px;}
+.d-tog{width:42px;flex-shrink:0;padding-top:3px;}
+.tog{width:40px;height:21px;border-radius:11px;border:1px solid var(--line2);background:var(--s3);cursor:pointer;position:relative;transition:all .18s;padding:0;flex-shrink:0;}
+.tog::after{content:'';position:absolute;top:3px;left:3px;width:13px;height:13px;border-radius:50%;background:var(--muted);transition:all .18s;}
+.tog.open{background:var(--a-bg);border-color:var(--a-brd);}
+.tog.open::after{background:var(--accent);left:22px;}
+.d-hrs{flex:1;display:flex;flex-direction:column;gap:5px;}
+.srow{display:flex;align-items:center;gap:6px;}
+.tin{height:29px;padding:0 8px;background:var(--s3);border:1px solid var(--line2);border-radius:5px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;width:105px;transition:border-color .15s;}
+.tin:focus{border-color:var(--accent);}
+.tsep{font-size:11px;color:var(--muted);flex-shrink:0;}
+.sdel{height:22px;width:22px;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:4px;font-size:15px;padding:0;transition:color .15s;line-height:1;}
+.sdel:hover{color:var(--danger);}
+.sadd{height:23px;padding:0 9px;font-size:10.5px;font-weight:600;border:1px dashed var(--line2);background:none;color:var(--muted);border-radius:4px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.sadd:hover{border-color:var(--accent);color:var(--accent);}
+.closed-txt{font-size:12px;color:var(--muted);padding-top:4px;font-style:italic;}
+
+/* Quick fill bar */
+.qf{display:flex;align-items:center;gap:5px;padding:9px 14px;background:var(--bg);border-top:1px solid var(--line);flex-wrap:wrap;}
+.qf-lbl{font-size:10.5px;color:var(--muted);flex-shrink:0;margin-right:2px;}
+
+/* Eid buttons — highlighted */
+.btn-eid{background:rgba(232,151,58,.1);border-color:rgba(232,151,58,.3);color:var(--warn);}
+.btn-eid:hover{background:rgba(232,151,58,.18)!important;filter:none!important;}
+
+/* ── TAGS ── */
+.tags-row{display:flex;gap:6px;flex-wrap:wrap;}
+.tag-btn{padding:5px 13px;border-radius:6px;border:1px solid var(--line2);background:none;color:var(--muted);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;}
+.tag-btn:hover{color:var(--text);}
+.t-sales  {background:var(--a-bg);border-color:var(--a-brd);color:var(--accent);}
+.t-service{background:var(--b-bg);border-color:rgba(91,141,238,.3);color:var(--blue);}
+.t-parts  {background:var(--p-bg);border-color:rgba(155,126,232,.3);color:var(--purple);}
+.t-used   {background:var(--w-bg);border-color:rgba(232,151,58,.3);color:var(--warn);}
+
+/* ── BUTTONS ── */
+.btn{height:31px;padding:0 12px;border-radius:6px;border:1px solid var(--line2);background:var(--s2);color:var(--text);font-size:11.5px;font-family:inherit;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.btn:hover{background:var(--s3);filter:brightness(1.1);}
+.btn-acc{background:var(--accent);border-color:var(--accent);color:#061a0d;}
+.btn-acc:hover{background:#00e896;border-color:#00e896;filter:none;}
+.btn-sm{height:26px;padding:0 9px;font-size:11px;}
+.btn-ghost{background:none;border-color:transparent;color:var(--muted);}
+.btn-ghost:hover{background:var(--s2);color:var(--text);border-color:var(--line);filter:none;}
+.btn-danger{background:var(--d-bg);border-color:rgba(232,66,74,.3);color:var(--danger);}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9990;display:none;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--s1);border:1px solid var(--line2);border-radius:12px;padding:22px;width:370px;max-width:92vw;}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:3px;}
+.modal p{font-size:12px;color:var(--muted);margin-bottom:13px;}
+.m-list{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:14px;}
+.m-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;border:1px solid var(--line);cursor:pointer;font-size:12.5px;transition:background .1s;}
+.m-item:hover{background:var(--s2);}
+.m-item input{accent-color:var(--accent);}
+.m-city{font-size:11px;color:var(--muted);margin-left:auto;}
+.m-foot{display:flex;gap:7px;justify-content:flex-end;}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:2px;}
+
+/* toast */
+.toast{position:fixed;bottom:20px;right:20px;z-index:99999;background:var(--s3);border:1px solid var(--line2);color:var(--text);padding:9px 15px;border-radius:7px;font-size:12.5px;display:none;box-shadow:0 4px 18px rgba(0,0,0,.4);}
+.toast.show{display:block;animation:fu .18s ease;}
+.toast.ok{background:var(--a-bg);border-color:var(--a-brd);color:var(--accent);}
+.toast.err{background:var(--d-bg);border-color:rgba(232,66,74,.3);color:var(--danger);}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* spinner */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid var(--line2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;}
+
+/* fetch status bar */
+.fetch-status{display:none;align-items:center;gap:8px;padding:9px 14px;border-radius:7px;font-size:12px;font-weight:500;margin-bottom:14px;border:1px solid;max-width:100%;}
+.fetch-status-info{background:var(--a-bg);border-color:var(--a-brd);color:var(--accent);}
+.fetch-status-err{background:var(--d-bg);border-color:rgba(232,66,74,.3);color:var(--danger);line-height:1.5;}
+
+body.rf-light .rf-nav-logo .rf-logo-main { color: #0f1117 !important; }
+body.rf-light .rf-nav-logo .rf-logo-sub  { color: rgba(82,89,107,0.55) !important; }
+body.rf-light .rf-dot { color: #00a66a !important; }
+/* light theme */
+body.rf-light{--bg:#f0f2f5;--s1:#ffffff;--s2:#f5f7fa;--s3:#edf0f4;--line:rgba(0,0,0,.09);--line2:rgba(0,0,0,.14);--text:#1a1d23;--muted:#6b7280;}
+body.rf-light .rf-topnav{background:rgba(255,255,255,.97);border-bottom-color:rgba(0,0,0,.1);}
+body.rf-light .rf-navlink{color:#6b7280;}
+body.rf-light input,body.rf-light select,body.rf-light textarea{color:#1a1d23;}
+
+/* Back to dashboard button */
+.rf-back-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0.28rem 0.7rem; border-radius: 5px;
+  font-size: 0.66rem; font-weight: 600; letter-spacing: 0.04em;
+  color: #8a8e9c; text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+}
+.rf-back-btn:hover { color: #f5f5f5; border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); }
+body.rf-light .rf-back-btn { color: #52596b; border-color: rgba(0,0,0,0.13); background: rgba(0,0,0,0.04); }
+body.rf-light .rf-back-btn:hover { color: #0f1117; border-color: rgba(0,0,0,0.22); background: rgba(0,0,0,0.08); }
+</style>
+</head>
+<body class="brand-lr">
+
+<!-- ═══ SHARED NAV ═══ -->
+<nav class="rf-topnav" id="rfTopNav">
+
+  <a href="index.html" class="rf-nav-logo">
+    <span class="rf-logo-main">REFFINE <span class="rf-dot">·</span> MENA HUB</span>
+    <span class="rf-logo-sub">Reffine JLR MENA Dashboard</span>
+  </a>
+  <div class="rf-topnav-divider"></div>
+
+  <div class="rf-nav-right">
+    <a href="index.html"              class="rf-navlink" data-rfpage="index">Dashboard</a>
+    <a href="translation.html"        class="rf-navlink" data-rfpage="translation">Translate</a>
+    <a href="translation-tool.html"   class="rf-navlink" data-rfpage="translation-tool">Translate Tool</a>
+    <a href="seo-tool.html"           class="rf-navlink" data-rfpage="seo-tool">SEO</a>
+    <a href="offer-generator.html"    class="rf-navlink" data-rfpage="offer-generator">Offers</a>
+    <a href="retailer-locator.html"  class="rf-navlink" data-rfpage="retailer-locator">Retailers</a>
+    <div class="rf-topnav-divider"></div>
+    <button class="rf-navlink" id="rfBtnResources">Docs</button>
+    <button class="rf-navlink" id="rfBtnEmails">Mails</button>
+  </div>
+
+  <div class="rf-right-section">
+    <div class="rf-nav-clock">
+      <canvas id="rfClockDubai" width="34" height="34"></canvas>
+      <div><span class="rf-clock-city">Dubai</span><span class="rf-clock-time" id="rfClockTimeDubai">--:--</span></div>
+    </div>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+    <div class="rf-nav-clock">
+      <canvas id="rfClockWarsaw" width="34" height="34"></canvas>
+      <div><span class="rf-clock-city">Warsaw</span><span class="rf-clock-time" id="rfClockTimeWarsaw">--:--</span></div>
+    </div>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+    <div class="rf-meeting-cards">
+      <a class="rf-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d" target="_blank">
+        <div class="rf-meeting-title">Weekly Call</div>
+        <div class="rf-meeting-countdown" id="rfWeeklyCountdown">--:--</div>
+        <div class="rf-meeting-sub">Mon 1:00 PM Warsaw</div>
+      </a>
+      <a class="rf-meeting-card" id="rfDailyCardLink" href="https://meet.google.com/pgy-nkum-gic" target="_blank">
+        <div class="rf-meeting-title">Daily Call</div>
+        <div class="rf-meeting-countdown" id="rfDailyCountdown">--:--</div>
+        <div class="rf-meeting-sub">07:45 · Thu 07:30 Warsaw</div>
+      </a>
+      <a class="rf-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d" target="_blank">
+        <div class="rf-meeting-title">Offers Call</div>
+        <div class="rf-meeting-countdown" id="rfOffersCountdown">--:--</div>
+        <div class="rf-meeting-sub">Thu 8:00 AM Warsaw</div>
+      </a>
+    </div>
+  </div>
+
+  <button class="rf-theme-btn" id="rfThemeBtn" style="margin-left:6px;" title="Toggle light/dark theme" aria-label="Toggle theme">
+    <svg class="rf-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="rf-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  
+  <a href="index.html" class="rf-back-btn" title="Back to Dashboard">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    Dashboard
+  </a>
+  <button class="rf-hamburger" id="rfHamburger" aria-label="Menu" style="margin-left:4px;">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="rf-mobile-drawer" id="rfDrawer">
+  <a href="index.html" class="rf-drawer-link" data-rfpage="index">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+  <a href="translation.html" class="rf-drawer-link" data-rfpage="translation">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10"/></svg>Translate</a>
+  <a href="translation-tool.html" class="rf-drawer-link" data-rfpage="translation-tool">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6m-7 0 6-6 2-3M2 5h12M7 2h1m15 20-5-10-5 10M14 18h6"/></svg>Translate Tool</a>
+  <a href="seo-tool.html" class="rf-drawer-link" data-rfpage="seo-tool">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>SEO</a>
+  <a href="offer-generator.html" class="rf-drawer-link" data-rfpage="offer-generator">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Offers</a>
+  <a href="retailer-locator.html" class="rf-drawer-link" data-rfpage="retailer-locator">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Retailers</a>
+  <button class="rf-drawer-link" id="rfDrawerResources">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Docs</button>
+  <button class="rf-drawer-link" id="rfDrawerEmails">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>Mails</button>
+  <a href="login.html" class="rf-drawer-link" data-rfpage="admin" style="color:rgba(138,142,156,0.42);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Admin</a>
+</div>
+
+
+<script>
+// ═══ REFFINE SHARED NAV JS ═══
+(function(){
+  var isIndex = (location.pathname.split('/').pop()||'index.html') === 'index.html' ||
+                (location.pathname.split('/').pop()||'') === '';
+
+  // Mark active page
+  var page = (location.pathname.split('/').pop()||'index.html').replace('.html','') || 'index';
+  document.querySelectorAll('[data-rfpage]').forEach(function(el){
+    if(el.getAttribute('data-rfpage') === page) el.classList.add('rf-active');
+  });
+
+  // Resources + Emails buttons
+  function handleResourcesClick(){ if(isIndex){ showMode && showMode('important'); } else { location.href='index.html#resources'; } }
+  function handleEmailsClick()   { if(isIndex){ showMode && showMode('emails');    } else { location.href='index.html#emails';    } }
+
+  document.getElementById('rfBtnResources') && document.getElementById('rfBtnResources').addEventListener('click', handleResourcesClick);
+  document.getElementById('rfBtnEmails')    && document.getElementById('rfBtnEmails').addEventListener('click', handleEmailsClick);
+  document.getElementById('rfDrawerResources') && document.getElementById('rfDrawerResources').addEventListener('click', handleResourcesClick);
+  document.getElementById('rfDrawerEmails')    && document.getElementById('rfDrawerEmails').addEventListener('click', handleEmailsClick);
+
+  // Hamburger
+  var btn = document.getElementById('rfHamburger');
+  var drawer = document.getElementById('rfDrawer');
+  if(btn && drawer){
+    btn.addEventListener('click', function(){
+      var open = drawer.classList.toggle('open'); btn.classList.toggle('open', open);
+    });
+    document.addEventListener('click', function(e){
+      if(!btn.contains(e.target)&&!drawer.contains(e.target)){ drawer.classList.remove('open'); btn.classList.remove('open'); }
+    });
+  }
+
+  // Clocks
+  function getTimeIn(tz){
+    try { return new Date(new Date().toLocaleString('en-US',{timeZone:tz,hour12:false,year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'})); }
+    catch(e){ return new Date(); }
+  }
+  function drawClock(id,tz,textId){
+    var c=document.getElementById(id); if(!c)return;
+    var ctx=c.getContext('2d'),W=c.width,CX=W/2,CY=W/2,R=W/2-1;
+    ctx.clearRect(0,0,W,W);
+    var t=getTimeIn(tz),sec=t.getSeconds(),min=t.getMinutes(),hr=t.getHours()%12,ms=t.getMilliseconds();
+    ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fillStyle='#1c1f28';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
+    for(var i=0;i<12;i++){var a=(i/12)*Math.PI*2-Math.PI/2;ctx.beginPath();ctx.moveTo(CX+Math.cos(a)*(R-2),CY+Math.sin(a)*(R-2));ctx.lineTo(CX+Math.cos(a)*(R-5),CY+Math.sin(a)*(R-5));ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
+    ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(((hr+min/60)/12)*Math.PI*2-Math.PI/2)*(R*0.45),CY+Math.sin(((hr+min/60)/12)*Math.PI*2-Math.PI/2)*(R*0.45));ctx.strokeStyle='#eceef2';ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(((min+sec/60)/60)*Math.PI*2-Math.PI/2)*(R*0.62),CY+Math.sin(((min+sec/60)/60)*Math.PI*2-Math.PI/2)*(R*0.62));ctx.strokeStyle='rgba(236,238,242,0.75)';ctx.lineWidth=1.5;ctx.stroke();
+    var sA=((sec+ms/1000)/60)*Math.PI*2-Math.PI/2;
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(sA)*(R*0.7),CY+Math.sin(sA)*(R*0.7));ctx.strokeStyle='#00d084';ctx.lineWidth=1;ctx.shadowColor='#00d084';ctx.shadowBlur=3;ctx.stroke();ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(CX,CY,2,0,Math.PI*2);ctx.fillStyle='#eceef2';ctx.fill();
+    var el=document.getElementById(textId);
+    if(el) el.textContent=String(t.getHours()).padStart(2,'0')+':'+String(min).padStart(2,'0');
+  }
+  function tick(){ drawClock('rfClockDubai','Asia/Dubai','rfClockTimeDubai'); drawClock('rfClockWarsaw','Europe/Warsaw','rfClockTimeWarsaw'); requestAnimationFrame(tick); }
+  tick();
+
+  // Countdown (Date.UTC based — timezone-safe)
+  function runCountdowns(){
+    var nowMs=Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    function until(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cU=cW-off;
+        if(dow!==null&&new Date(cW).getUTCDay()!==dow) continue;
+        if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function untilDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dW).getUTCDay()===4;
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cU=cW-off; if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function fmt(ms){
+      if(ms<=0) return 'NOW';
+      var s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sc=s%60;
+      function p(n){return String(n).padStart(2,'0');}
+      return d>0 ? d+'d:'+p(h)+'h:'+p(m)+'m' : p(h)+'h:'+p(m)+'m:'+p(sc)+'s';
+    }
+    function set(id,ms){
+      var el=document.getElementById(id); if(!el) return;
+      var t=fmt(ms); el.textContent=t;
+      el.className='rf-meeting-countdown'+(t==='NOW'?' now':ms<30*60*1000?' soon':'');
+    }
+    set('rfWeeklyCountdown', until(13,0,1));
+    set('rfDailyCountdown',  untilDaily());
+    set('rfOffersCountdown', until(8,0,4));
+  }
+  runCountdowns();
+  setInterval(runCountdowns,1000);
+
+})();
+/* ─── MEETING NOTIFICATIONS ─── */
+(function(){
+  var DAILY_NORMAL = 'https://meet.google.com/pgy-nkum-gic';
+  var DAILY_THU    = 'https://meet.google.com/hxe-gzax-sre';
+
+  /* Update daily card href based on whether next daily is Thu or not */
+  function updateDailyLink(){
+    var nowMs = Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    var isThu=false;
+    for(var i=0;i<=7;i++){
+      var b=new Date(wNowMs);
+      var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+      var cThu=new Date(dW).getUTCDay()===4;
+      var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,cThu?30:45,0);
+      var cU=cW-off;
+      if(cU>nowMs){ isThu=cThu; break; }
+    }
+    var link=isThu?DAILY_THU:DAILY_NORMAL;
+    var cards=document.querySelectorAll('#rfDailyCardLink, #rfDailyMobileCard');
+    cards.forEach(function(el){ el.href=link; });
+  }
+  updateDailyLink();
+  setInterval(updateDailyLink, 60000);
+
+  /* ── Browser Notifications: 1-minute warning before each call ── */
+  var _notified = {};
+
+  var CALLS = [
+    { id:'weekly', name:'Weekly Call',  link:'https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d' },
+    { id:'daily',  name:'Daily Call',   link:null },  // link resolved dynamically
+    { id:'offers', name:'Offers Call',  link:'https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d' },
+  ];
+
+  function requestPermission(){
+    if(!('Notification' in window)) return;
+    if(Notification.permission==='default'){
+      Notification.requestPermission();
+    }
+  }
+  /* Ask for permission on first user interaction */
+  document.addEventListener('click', requestPermission, {once:true});
+
+  function getMsUntilCall(callId){
+    var nowMs=Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    function until(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cU=cW-off;
+        if(dow!==null&&new Date(cW).getUTCDay()!==dow) continue;
+        if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function untilDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dW).getUTCDay()===4;
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cU=cW-off; if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    if(callId==='weekly') return until(13,0,1);
+    if(callId==='daily')  return untilDaily();
+    if(callId==='offers') return until(8,0,4);
+    return 86400000;
+  }
+
+  function getDailyLink(){
+    var el=document.getElementById('rfDailyCardLink');
+    return el ? el.href : DAILY_NORMAL;
+  }
+
+  function fireNotification(call){
+    if(!('Notification' in window)||Notification.permission!=='granted') return;
+    var link=call.id==='daily'?getDailyLink():call.link;
+    var n=new Notification('📞 '+call.name+' starts in 1 minute', {
+      body: 'Click to join the call now',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%2300d084"/><text x="16" y="21" text-anchor="middle" font-size="16">📞</text></svg>',
+      requireInteraction: false,
+      tag: call.id
+    });
+    n.onclick=function(){ window.open(link,'_blank'); n.close(); };
+    setTimeout(function(){ n.close(); }, 15000);
+  }
+
+  function checkNotifications(){
+    var nowMs=Date.now();
+    /* Build a key based on current date+hour so notification fires once per occurrence */
+    var dayKey = new Date(nowMs).toISOString().slice(0,13);
+    CALLS.forEach(function(call){
+      var ms=getMsUntilCall(call.id);
+      var key=call.id+':'+dayKey;
+      /* Fire when 55–65 seconds remain (window to catch the 1-min mark) */
+      if(ms>55000&&ms<=65000&&!_notified[key]){
+        _notified[key]=true;
+        fireNotification(call);
+      }
+      /* Clean up old keys to avoid memory leak */
+      if(ms>120000) delete _notified[call.id+':'+new Date(nowMs-3600000).toISOString().slice(0,13)];
+    });
+  }
+
+  setInterval(checkNotifications, 5000);
+})();
+
+/* ─── THEME TOGGLE ─── */
+(function(){
+  var STORE = 'rf_theme';
+  function applyTheme(t){ document.body.classList.toggle('rf-light', t==='light'); try{ localStorage.setItem(STORE, t); }catch(e){} }
+  try{ var saved = localStorage.getItem(STORE) || 'dark'; } catch(e){ var saved = 'dark'; }
+  applyTheme(saved);
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('rfThemeBtn');
+    if(btn){ btn.addEventListener('click', function(){
+      applyTheme(document.body.classList.contains('rf-light') ? 'dark' : 'light');
+    }); }
+  });
+})();
+
+</script>
+
+
+<!-- ═══ APP ═══ -->
+<div class="app">
+
+  <!-- SIDEBAR (hidden until data loaded) -->
+  <div class="sb" id="sb" style="display:none">
+    <div class="sb-head">
+      <input class="sb-q" id="sbQ" placeholder="Search locations…" type="text">
+      <div class="sb-chips">
+        <button class="chip on" data-f="all">All</button>
+        <button class="chip" data-f="sales">Sales</button>
+        <button class="chip" data-f="service">Service</button>
+      </div>
+    </div>
+    <div class="sb-list" id="sbList"></div>
+    <button class="sb-add" id="addBtn">+ Add location</button>
+    <div class="sb-foot">
+      <span id="sbCnt">—</span>
+      <span id="sbMod" style="color:var(--warn);display:none">0 modified</span>
+    </div>
+  </div>
+
+  <!-- MAIN PANEL -->
+  <div class="main" id="main">
+
+    <!-- ── LOAD SCREEN ── -->
+    <div class="load-screen" id="upScreen">
+      <div class="load-inner">
+
+        <div class="load-header">
+          <div class="load-title">Retailer Locator Editor</div>
+          <div class="load-sub">Select a brand, then choose a market and language — or drag &amp; drop a CSV file manually</div>
+        </div>
+
+        <!-- Brand selector -->
+        <div class="brand-tabs">
+          <button class="brand-tab bt-lr active-lr" data-brand="lr">
+            <span class="bd"></span> Land Rover
+          </button>
+          <button class="brand-tab bt-rr" data-brand="rr">
+            <span class="bd"></span> Range Rover
+          </button>
+          <button class="brand-tab bt-jag" data-brand="jag">
+            <span class="bd"></span> Jaguar
+          </button>
+        </div>
+
+        <!-- Week start legend -->
+        <div class="week-legend">
+          <div class="wl-item"><div class="wl-dot wl-mon"></div>Week starts Monday</div>
+          <div class="wl-item"><div class="wl-dot wl-sun"></div>Week starts Sunday</div>
+        </div>
+
+        <!-- Country grid -->
+        <div id="fetchStatus" class="fetch-status" style="display:none;"></div>
+        <div class="country-grid" id="countryGrid"></div>
+
+        <!-- Divider -->
+        <div class="load-divider"><span>or upload CSV manually</span></div>
+
+        <!-- Drag-drop zone -->
+        <div class="up-zone" id="upZone">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <h2>Drop your dealers.csv here</h2>
+          <p>Drag &amp; drop or click to choose a local CSV file<br>
+          <span style="color:var(--muted);font-size:10.5px;">Tip: Shift+Click any language button to open the raw CSV in a new tab, then save it and drag it here</span></p>
+        </div>
+        <input type="file" id="fileIn" accept=".csv" style="display:none">
+
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty" id="emptyEl" style="display:none">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <h3>Select a location</h3>
+      <p>Pick one from the list to edit</p>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="tbar" id="tbar" style="display:none">
+      <span class="tbar-name" id="tbarName">—</span>
+      <span class="tbar-id" id="tbarId"></span>
+      <span class="mod-pill" id="modPill">● Modified</span>
+      <button class="btn btn-sm btn-ghost" id="resetBtn">↺ Reset</button>
+      <button class="btn btn-sm" id="applyBtn">Apply hours to…</button>
+      <button class="btn btn-sm btn-ghost" id="loadNewBtn">↑ Load New</button>
+      <button class="btn btn-sm btn-acc" id="exportBtn" style="display:none">↓ Export CSV</button>
+    </div>
+
+    <!-- Editor -->
+    <div class="content" id="contentEl" style="display:none">
+      <div class="c-inner" id="cInner"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Apply hours modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Apply hours to…</h3>
+    <p>Overwrite opening hours for the selected locations</p>
+    <div class="m-list" id="mList"></div>
+    <div class="m-foot">
+      <button class="btn btn-sm btn-ghost" id="mCancel">Cancel</button>
+      <button class="btn btn-sm btn-acc" id="mConfirm">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════
+//  COUNTRY + URL DATA
+//  weekStart: 1 = Monday-first, 0 = Sunday-first
+// ═══════════════════════════════════════════════════════════════
+var COUNTRIES = [
+  {
+    name:'United Arab Emirates', flag:'🇦🇪', weekStart:1,
+    lr:[
+      {disp:'EN',url:'https://api2.mena.uae.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.uae.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.uae-rangerover.lrdx.prod.reffine.com/en-ae/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.uae-rangerover.lrdx.prod.reffine.com/ar-ae/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api2.mena.uae.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.uae.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Saudi Arabia', flag:'🇸🇦', weekStart:0,
+    lr:[
+      {disp:'EN',url:'https://api2.mena.ksa.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.ksa.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.ksa-rangerover.lrdx.prod.reffine.com/en-sa/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.ksa-rangerover.lrdx.prod.reffine.com/ar-sa/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api2.mena.ksa.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.ksa.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Qatar', flag:'🇶🇦', weekStart:0,
+    lr:[
+      {disp:'EN',url:'https://api.mena-qatar.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena-qatar.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.qatar-rangerover.lrdx.prod.reffine.com/en-qa/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.qatar-rangerover.lrdx.prod.reffine.com/ar-qa/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.qatar.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena.qatar.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Oman', flag:'🇴🇲', weekStart:0,
+    lr:[
+      {disp:'EN',url:'https://api2.mena.oman.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.oman.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.oman-rangerover.lrdx.prod.reffine.com/en-om/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.oman-rangerover.lrdx.prod.reffine.com/ar-om/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api2.mena.oman.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.oman.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Bahrain', flag:'🇧🇭', weekStart:0,
+    lr:[
+      {disp:'EN',url:'https://api.mena-bahrain.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena-bahrain.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.bahrain-rangerover.lrdx.prod.reffine.com/en-bh/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.bahrain-rangerover.lrdx.prod.reffine.com/ar-bh/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.bahrain.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena.bahrain.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Kuwait', flag:'🇰🇼', weekStart:0,
+    lr:[
+      {disp:'EN',url:'https://api.mena-kuwait.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena-kuwait.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.kuwait-rangerover.lrdx.prod.reffine.com/en-kw/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.kuwait-rangerover.lrdx.prod.reffine.com/ar-kw/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.kuwait.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena.kuwait.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Jordan', flag:'🇯🇴', weekStart:0,
+    lr:[
+      {disp:'EN',url:'https://api.mena-jordan.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena-jordan.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.jordan-rangerover.lrdx.prod.reffine.com/en-jo/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.jordan-rangerover.lrdx.prod.reffine.com/ar-jo/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.jordan.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena.jordan.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Egypt', flag:'🇪🇬', weekStart:0,
+    lr:[
+      {disp:'EN',url:'https://api.mena-egypt.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena-egypt.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.egypt-rangerover.lrdx.prod.reffine.com/en-eg/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.egypt-rangerover.lrdx.prod.reffine.com/ar-eg/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.egypt.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena.egypt.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Palestine', flag:'🇵🇸', weekStart:0,
+    lr:[
+      {disp:'EN',url:'https://api.mena-palestine.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena-palestine.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.palestine-rangerover.lrdx.prod.reffine.com/en-ps/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.palestine-rangerover.lrdx.prod.reffine.com/ar-ps/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.palestine.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena.palestine.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Iraq', flag:'🇮🇶', weekStart:0,
+    lr:[
+      {disp:'EN',url:'https://api.mena-iraq.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena-iraq.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'},
+      {disp:'KU',url:'https://api.mena-iraq.lr.prod.reffine.com/ku/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.iraq-rangerover.lrdx.prod.reffine.com/en-iq/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.iraq-rangerover.lrdx.prod.reffine.com/ar-iq/jlr-admin/api/dealers.csv'},
+      {disp:'KU',url:'https://api.iraq-rangerover.lrdx.prod.reffine.com/ku-iq/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.iraq.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena.iraq.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'},
+      {disp:'KU',url:'https://api.mena.iraq.jag.prod.reffine.com/ku/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Morocco', flag:'🇲🇦', weekStart:1,
+    lr:[
+      {disp:'EN',url:'https://api2.mena.morocco.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.morocco.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api2.mena.morocco.lr.prod.reffine.com/fr/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.morocco-rangerover.lrdx.prod.reffine.com/en-ma/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.morocco-rangerover.lrdx.prod.reffine.com/ar-ma/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api.morocco-rangerover.lrdx.prod.reffine.com/fr-ma/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api2.mena.morocco.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.morocco.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api2.mena.morocco.jag.prod.reffine.com/fr/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Lebanon', flag:'🇱🇧', weekStart:1,
+    lr:[
+      {disp:'EN',url:'https://api.mena.lebanon.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena.lebanon.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api.mena.lebanon.lr.prod.reffine.com/fr/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.lebanon-rangerover.lrdx.prod.reffine.com/en-lb/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.lebanon-rangerover.lrdx.prod.reffine.com/ar-lb/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api.lebanon-rangerover.lrdx.prod.reffine.com/fr-lb/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.lebanon.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.mena.lebanon.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api.mena.lebanon.jag.prod.reffine.com/fr/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Tunisia', flag:'🇹🇳', weekStart:1,
+    lr:[
+      {disp:'EN',url:'https://api2.mena.tunisia.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.tunisia.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api2.mena.tunisia.lr.prod.reffine.com/fr/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.tunisia-rangerover.lrdx.prod.reffine.com/en-tn/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.tunisia-rangerover.lrdx.prod.reffine.com/ar-tn/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api.tunisia-rangerover.lrdx.prod.reffine.com/fr-tn/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api2.mena.tunisia.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.tunisia.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api2.mena.tunisia.jag.prod.reffine.com/fr/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Algeria', flag:'🇩🇿', weekStart:0,
+    lr:[
+      {disp:'EN',url:'https://api2.mena.algeria.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.algeria.lr.prod.reffine.com/ar/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api2.mena.algeria.lr.prod.reffine.com/fr/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.algeria-rangerover.lrdx.prod.reffine.com/en-dz/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api.algeria-rangerover.lrdx.prod.reffine.com/ar-dz/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api.algeria-rangerover.lrdx.prod.reffine.com/fr-dz/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api2.mena.algeria.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AR',url:'https://api2.mena.algeria.jag.prod.reffine.com/ar/jlr-admin/api/dealers.csv'},
+      {disp:'FR',url:'https://api2.mena.algeria.jag.prod.reffine.com/fr/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Azerbaijan', flag:'🇦🇿', weekStart:1,
+    lr:[
+      {disp:'EN',url:'https://api.mena-azerbaijan.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AZ',url:'https://api.mena-azerbaijan.lr.prod.reffine.com/az/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.azerbaijan-rangerover.lrdx.prod.reffine.com/en-az/jlr-admin/api/dealers.csv'},
+      {disp:'AZ',url:'https://api.azerbaijan-rangerover.lrdx.prod.reffine.com/az-az/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.azerbaijan.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AZ',url:'https://api.mena.azerbaijan.jag.prod.reffine.com/az/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Georgia', flag:'🇬🇪', weekStart:1,
+    lr:[
+      {disp:'EN',url:'https://api.mena-georgia.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'GE',url:'https://api.mena-georgia.lr.prod.reffine.com/ge/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.georgia-rangerover.lrdx.prod.reffine.com/en-ge/jlr-admin/api/dealers.csv'},
+      {disp:'GE',url:'https://api.georgia-rangerover.lrdx.prod.reffine.com/ge-ge/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.georgia.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'GE',url:'https://api.mena.georgia.jag.prod.reffine.com/ge/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Kazakhstan', flag:'🇰🇿', weekStart:1,
+    lr:[
+      {disp:'EN',url:'https://api.mena.kazakhstan.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'KZ',url:'https://api.mena.kazakhstan.lr.prod.reffine.com/kz/jlr-admin/api/dealers.csv'},
+      {disp:'RU',url:'https://api.mena.kazakhstan.lr.prod.reffine.com/ru/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.kazakhstan-rangerover.lrdx.prod.reffine.com/en-kz/jlr-admin/api/dealers.csv'},
+      {disp:'KZ',url:'https://api.kazakhstan-rangerover.lrdx.prod.reffine.com/kz-kz/jlr-admin/api/dealers.csv'},
+      {disp:'RU',url:'https://api.kazakhstan-rangerover.lrdx.prod.reffine.com/ru-kz/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.kazakhstan.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'KZ',url:'https://api.mena.kazakhstan.jag.prod.reffine.com/kz/jlr-admin/api/dealers.csv'},
+      {disp:'RU',url:'https://api.mena.kazakhstan.jag.prod.reffine.com/ru/jlr-admin/api/dealers.csv'}
+    ]
+  },
+  {
+    name:'Armenia', flag:'🇦🇲', weekStart:1,
+    lr:[
+      {disp:'EN',url:'https://api.mena.armenia.lr.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AM',url:'https://api.mena.armenia.lr.prod.reffine.com/am/jlr-admin/api/dealers.csv'},
+      {disp:'RU',url:'https://api.mena.armenia.lr.prod.reffine.com/ru/jlr-admin/api/dealers.csv'}
+    ],
+    rr:[
+      {disp:'EN',url:'https://api.armenia-rangerover.lrdx.prod.reffine.com/en-am/jlr-admin/api/dealers.csv'},
+      {disp:'AM',url:'https://api.armenia-rangerover.lrdx.prod.reffine.com/am-am/jlr-admin/api/dealers.csv'},
+      {disp:'RU',url:'https://api.armenia-rangerover.lrdx.prod.reffine.com/ru-am/jlr-admin/api/dealers.csv'}
+    ],
+    jag:[
+      {disp:'EN',url:'https://api.mena.armenia.jag.prod.reffine.com/en/jlr-admin/api/dealers.csv'},
+      {disp:'AM',url:'https://api.mena.armenia.jag.prod.reffine.com/am/jlr-admin/api/dealers.csv'},
+      {disp:'RU',url:'https://api.mena.armenia.jag.prod.reffine.com/ru/jlr-admin/api/dealers.csv'}
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+var COLS=['id','address','www','additional_www','phone','email','tag_class','tags',
+          'day_1','day_2','day_3','day_4','day_5','day_6','day_7',
+          'city','lat','lng','headlineid','name','position'];
+
+// Day label arrays — always indexed 0..6 matching day_1..day_7
+var DS_MON=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; // weekStart=1
+var DS_SUN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; // weekStart=0
+
+// Absolute day → day_N index mapping  (day_N = position in week, 1-based)
+// Mon-first: Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6, Sun=7
+// Sun-first: Sun=1, Mon=2, Tue=3, Wed=4, Thu=5, Fri=6, Sat=7
+var DAY_MAP_MON = {Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7};
+var DAY_MAP_SUN = {Sun:1,Mon:2,Tue:3,Wed:4,Thu:5,Fri:6,Sat:7};
+
+var rows=[],orig=[],mods={},cur=null,fb='retailers';
+var filt='all',srch='';
+var currentWeekStart=1;
+var currentCountry=null;
+var currentBrand='lr';
+
+function $i(id){return document.getElementById(id);}
+function $$s(s,c){return Array.from((c||document).querySelectorAll(s));}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(m,t){var el=$i('toast');el.textContent=m;el.className='toast show '+(t||'');setTimeout(function(){el.className='toast';},2400);}
+function find(id){return rows.find(function(r){return r.id===id;});}
+function cp(o){return JSON.parse(JSON.stringify(o));}
+function ltype(r){var tc=(r.tag_class||'').toLowerCase();if(tc.includes('service')||tc.includes('parts'))return tc.includes('sales')?'mixed':'service';return'sales';}
+function getDS(){return currentWeekStart===0?DS_SUN:DS_MON;}
+function getDayMap(){return currentWeekStart===0?DAY_MAP_SUN:DAY_MAP_MON;}
+
+function todayIndex(){
+  var d=new Date().getDay();
+  if(currentWeekStart===1) return(d+6)%7;
+  return d;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BRAND TABS
+// ═══════════════════════════════════════════════════════════════
+function selectBrand(brand){
+  currentBrand=brand;
+  document.body.className=document.body.className.replace(/brand-\w+/,'').trim()+' brand-'+brand;
+  $$s('.brand-tab').forEach(function(t){
+    t.className=t.className.replace(/active-\w+/,'').trim();
+    if(t.dataset.brand===brand) t.classList.add('active-'+brand);
+  });
+  buildCountryGrid();
+}
+
+$$s('.brand-tab').forEach(function(btn){
+  btn.addEventListener('click',function(){selectBrand(btn.dataset.brand);});
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  COUNTRY GRID
+// ═══════════════════════════════════════════════════════════════
+function buildCountryGrid(){
+  var grid=$i('countryGrid');
+  grid.innerHTML='';
+  COUNTRIES.forEach(function(c){
+    var langs=c[currentBrand]||[];
+    var weekCls=c.weekStart===1?'cc-week-mon':'cc-week-sun';
+    var weekLabel=c.weekStart===1?'Mon-first':'Sun-first';
+
+    var btns=langs.map(function(l){
+      return '<button class=\"lang-btn\" data-url=\"'+l.url+'\" data-country=\"'+esc(c.name)+'\" data-weekstart=\"'+c.weekStart+'\" title=\"'+esc(c.name)+' · '+l.disp+' (Shift+click = open raw URL)\">'+l.disp+'</button>';
+    }).join('');
+
+    var card=document.createElement('div');
+    card.className='country-card';
+    card.innerHTML='<div class="cc-head">'+
+      '<span class="cc-flag">'+c.flag+'</span>'+
+      '<span class="cc-name">'+esc(c.name)+'</span>'+
+      '<div class="cc-week '+weekCls+'" title="'+weekLabel+'"></div>'+
+    '</div>'+
+    '<div class="cc-langs">'+btns+'</div>';
+
+    card.querySelectorAll('.lang-btn').forEach(function(btn){
+      btn.addEventListener('click',function(e){
+        if(e.shiftKey){
+          // Shift+click = open raw URL in new tab for inspection
+          window.open(btn.dataset.url,'_blank');
+          return;
+        }
+        fetchCSV(btn.dataset.url,btn.dataset.country,parseInt(btn.dataset.weekstart),btn);
+      });
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FETCH CSV FROM URL  — tries multiple CORS proxies in sequence
+// ═══════════════════════════════════════════════════════════════
+function fetchCSV(url,countryName,weekStart,triggerBtn){
+  if(triggerBtn){
+    triggerBtn.dataset.orig = triggerBtn.textContent;
+    triggerBtn.innerHTML = '<span class="spin"></span>';
+    triggerBtn.classList.add('loading');
+    triggerBtn.classList.remove('loaded','err-btn');
+  }
+  showFetchStatus('Loading '+countryName+'…','info');
+
+  // Ordered list of proxies — first direct, then CORS proxies
+  var proxies = [
+    {label:'direct',   build:function(u){ return u; }},
+    {label:'corsproxy',build:function(u){ return 'https://corsproxy.io/?url='+encodeURIComponent(u); }},
+    {label:'allorigins',build:function(u){ return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u); }},
+    {label:'thingproxy',build:function(u){ return 'https://thingproxy.freeboard.io/fetch/'+u; }},
+    {label:'cors-sh',  build:function(u){ return 'https://proxy.cors.sh/'+u; }}
+  ];
+  var idx = 0;
+  var errors = [];
+
+  function tryNext(){
+    if(idx >= proxies.length){
+      // All proxies failed — show clear error
+      var msg = 'All '+proxies.length+' proxies failed for '+countryName+' ('+errors.join(' | ')+').<br>'+
+        '<b>Fix:</b> Right-click any language button and open in new tab to download the CSV, then drag-drop it into the upload zone. Or Shift+Click a button to open the raw URL.';
+      showFetchStatus(msg, 'err');
+      toast('Load failed — use manual CSV upload', 'err');
+      if(triggerBtn){
+        triggerBtn.textContent = '✗ Failed';
+        triggerBtn.classList.remove('loading');
+        triggerBtn.style.borderColor = 'rgba(232,66,74,.4)';
+        triggerBtn.style.color = '#e8424a';
+        setTimeout(function(){
+          if(triggerBtn){
+            triggerBtn.textContent = triggerBtn.dataset.orig || '??';
+            triggerBtn.style.borderColor = '';
+            triggerBtn.style.color = '';
+          }
+        }, 3000);
+      }
+      return;
+    }
+
+    var proxy = proxies[idx++];
+    var proxyUrl = proxy.build(url);
+
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, 8000); // 8s timeout per proxy
+
+    fetch(proxyUrl, { signal: controller.signal })
+      .then(function(r){
+        clearTimeout(timer);
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.text();
+      })
+      .then(function(text){
+        // Must have content
+        if(!text || text.trim().length < 5){
+          throw new Error('Empty response');
+        }
+        var t = text.trim();
+        // Reject HTML error pages only (not JSON)
+        if(t.startsWith('<!DOCTYPE') || t.startsWith('<html')){
+          throw new Error('Got HTML error page instead of data');
+        }
+        // Hand off to loadCSV — it handles both JSON and CSV natively
+        fb = countryName.replace(/\s+/g,'-').toLowerCase()+'-'+currentBrand+'-dealers';
+        currentWeekStart = weekStart;
+        currentCountry = countryName;
+        loadCSV(text);
+        // Show success button state if rows were loaded
+        if(rows.length > 0){
+          if(triggerBtn){
+            triggerBtn.textContent = '✓ '+rows.length;
+            triggerBtn.classList.remove('loading');
+            triggerBtn.classList.add('loaded');
+            setTimeout(function(){
+              if(triggerBtn){
+                triggerBtn.textContent = triggerBtn.dataset.orig || '??';
+                triggerBtn.classList.remove('loaded');
+              }
+            }, 3000);
+          }
+        } else {
+          // loadCSV already showed the error — reset button
+          if(triggerBtn){
+            triggerBtn.textContent = triggerBtn.dataset.orig || '??';
+            triggerBtn.classList.remove('loading');
+          }
+        }
+      })
+      .catch(function(err){
+        clearTimeout(timer);
+        errors.push(proxy.label+': '+(err.message||'failed'));
+        tryNext();
+      });
+  }
+
+  tryNext();
+}
+
+// Status bar above country grid
+function showFetchStatus(msg, type){
+  var el = $i('fetchStatus');
+  if(!el) return;
+  if(!msg){ el.style.display='none'; return; }
+  el.style.display = 'flex';
+  el.className = 'fetch-status fetch-status-'+type;
+  el.innerHTML = msg;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOAD CSV TEXT — robust: handles BOM, delimiter detection,
+//  flexible column names, missing id field
+// ═══════════════════════════════════════════════════════════════
+function loadCSV(text){
+  // 1) Strip BOM
+  text = text.replace(/^\uFEFF/, '');
+  var trimmed = text.trim();
+
+  if(!trimmed){
+    showFetchStatus('Error: received empty response.','err');
+    return;
+  }
+
+  // 2) Column alias map — canonical name → list of possible API field names
+  var aliases = {
+    id:            ['id','ID','dealer_id','dealerId','retailer_id'],
+    name:          ['name','Name','dealer_name','dealerName','retailer_name','title','Title'],
+    address:       ['address','Address','street','Street','full_address'],
+    www:           ['www','WWW','url','URL','website','cta_url','link'],
+    additional_www:['additional_www','additionalWww','maps_url','google_maps','map_url','directions_url'],
+    phone:         ['phone','Phone','telephone','tel','Tel','phone_number'],
+    email:         ['email','Email','mail','e_mail'],
+    tag_class:     ['tag_class','tagClass','tag-class','type','Type','dealer_type','category'],
+    tags:          ['tags','Tags','label','labels','services'],
+    day_1:         ['day_1','day1','Day1','Day_1','mon','monday','opening_1','hours_1'],
+    day_2:         ['day_2','day2','Day2','Day_2','tue','tuesday','opening_2','hours_2'],
+    day_3:         ['day_3','day3','Day3','Day_3','wed','wednesday','opening_3','hours_3'],
+    day_4:         ['day_4','day4','Day4','Day_4','thu','thursday','opening_4','hours_4'],
+    day_5:         ['day_5','day5','Day5','Day_5','fri','friday','opening_5','hours_5'],
+    day_6:         ['day_6','day6','Day6','Day_6','sat','saturday','opening_6','hours_6'],
+    day_7:         ['day_7','day7','Day7','Day_7','sun','sunday','opening_7','hours_7'],
+    city:          ['city','City','town','Town','region','Region','locality'],
+    lat:           ['lat','Lat','latitude','Latitude','lat_lng_lat'],
+    lng:           ['lng','Lng','lon','longitude','Longitude','lat_lng_lng','long'],
+    headlineid:    ['headlineid','headlineId','headline_id','HeadlineId','headline'],
+    position:      ['position','Position','order','sort_order','sort','index']
+  };
+
+  // Build reverse lookup: any alias → canonical key
+  function buildAliasMap(keys){
+    var m = {};
+    Object.keys(aliases).forEach(function(canon){
+      aliases[canon].forEach(function(a){
+        if(keys.indexOf(a) !== -1) m[a] = canon;
+      });
+    });
+    return m;
+  }
+
+  // Normalise a single raw object → canonical row
+  var autoId = 0;
+  function normaliseRow(raw, headerMap){
+    var o = {};
+    Object.keys(raw).forEach(function(k){
+      var canon = headerMap[k] || k;
+      var v = raw[k];
+      o[canon] = (v == null ? '' : String(v)).trim();
+    });
+    COLS.forEach(function(c){ if(!(c in o)) o[c] = ''; });
+    if(!o.id) o.id = 'row-' + (++autoId);
+    return o;
+  }
+
+  // Filter out skeleton-empty rows
+  function notEmpty(r){
+    return !!(r.name || r.address || r.city || r.phone);
+  }
+
+  // ── PATH A: response is JSON ──────────────────────────────────
+  var firstChar = trimmed.charAt(0);
+  if(firstChar === '{' || firstChar === '['){
+    var parsed;
+    try{ parsed = JSON.parse(trimmed); }
+    catch(e){
+      showFetchStatus('Response looks like JSON but could not be parsed: '+e.message,'err');
+      return;
+    }
+
+    // Unwrap common envelope shapes
+    var arr = null;
+
+    if(Array.isArray(parsed)){
+      // Direct array of dealers
+      arr = parsed;
+    } else if(parsed && typeof parsed === 'object'){
+      // Try common wrapper keys
+      var wrapKeys = ['data','dealers','retailers','results','items','records','locations','list','rows'];
+      for(var wi=0; wi<wrapKeys.length; wi++){
+        if(Array.isArray(parsed[wrapKeys[wi]])){
+          arr = parsed[wrapKeys[wi]];
+          break;
+        }
+      }
+      // allorigins wraps as { contents: "<csv or json string>" }
+      if(!arr && typeof parsed.contents === 'string'){
+        return loadCSV(parsed.contents); // recurse with unwrapped content
+      }
+      // Single dealer object
+      if(!arr && parsed.id) arr = [parsed];
+    }
+
+    if(!arr || arr.length === 0){
+      var preview = trimmed.substring(0,400).replace(/</g,'&lt;');
+      showFetchStatus(
+        'JSON received but no dealer array found. Keys at root: ['+Object.keys(parsed||{}).join(', ')+']<br>'+
+        '<code style="font-size:10px;word-break:break-all;display:block;margin-top:5px;opacity:.65">'+preview+'</code>',
+        'err'
+      );
+      return;
+    }
+
+    // Build header map from first item's keys
+    var jsonKeys = Object.keys(arr[0] || {});
+    var headerMap = buildAliasMap(jsonKeys);
+
+    rows = arr.map(function(item){ return normaliseRow(item, headerMap); }).filter(notEmpty);
+    orig = cp(rows); mods = {};
+    finishLoad(jsonKeys);
+    return;
+  }
+
+  // ── PATH B: response is CSV ───────────────────────────────────
+  // Auto-detect delimiter
+  var firstLine = trimmed.split(/\r?\n/)[0];
+  var delim = ',';
+  if((firstLine.match(/;/g)||[]).length > (firstLine.match(/,/g)||[]).length) delim = ';';
+  else if((firstLine.match(/\t/g)||[]).length > (firstLine.match(/,/g)||[]).length) delim = '\t';
+
+  var res = Papa.parse(trimmed, {
+    header: true,
+    delimiter: delim,
+    skipEmptyLines: 'greedy',
+    transformHeader: function(h){ return h.trim().replace(/^\uFEFF/,''); }
+  });
+
+  if(!res.data || res.data.length === 0){
+    var preview2 = trimmed.substring(0,400).replace(/</g,'&lt;');
+    showFetchStatus(
+      'CSV parsed 0 rows (delimiter: "'+delim+'"). Raw response preview:<br>'+
+      '<code style="font-size:10px;word-break:break-all;display:block;margin-top:5px;opacity:.65">'+preview2+'</code>',
+      'err'
+    );
+    return;
+  }
+
+  var csvHeaders = res.meta.fields || [];
+  var headerMap2 = buildAliasMap(csvHeaders);
+
+  rows = res.data.map(function(r){ return normaliseRow(r, headerMap2); }).filter(notEmpty);
+  orig = cp(rows); mods = {};
+  finishLoad(csvHeaders);
+}
+
+function finishLoad(foundColumns){
+  if(rows.length === 0){
+    showFetchStatus(
+      'Parsed response but got 0 usable rows.<br>'+
+      'Columns/keys found: ['+foundColumns.slice(0,20).join(', ')+']',
+      'err'
+    );
+    return;
+  }
+  showFetchStatus('','');
+  $i('sb').style.display = 'flex';
+  $i('upScreen').style.display = 'none';
+  var eb = $i('exportBtn'); if(eb) eb.style.display = '';
+  renderSB();
+  if(rows.length) pick(rows[0].id);
+  toast('Loaded '+rows.length+' locations'+(currentCountry?' — '+currentCountry:''),'ok');
+}
+
+// Drag-drop / file input
+$i('upZone').addEventListener('click',function(){$i('fileIn').click();});
+$i('upZone').addEventListener('dragover',function(e){e.preventDefault();this.classList.add('drag');});
+$i('upZone').addEventListener('dragleave',function(){this.classList.remove('drag');});
+$i('upZone').addEventListener('drop',function(e){e.preventDefault();this.classList.remove('drag');var f=e.dataTransfer.files[0];if(f)rf(f);});
+$i('fileIn').addEventListener('change',function(){if(this.files[0])rf(this.files[0]);});
+
+$i('loadNewBtn').addEventListener('click',function(){
+  $i('sb').style.display='none';
+  $i('upScreen').style.display='flex';
+  $i('tbar').style.display='none';
+  $i('contentEl').style.display='none';
+  $i('emptyEl').style.display='none';
+  rows=[];orig=[];mods={};cur=null;
+});
+
+function rf(f){
+  if(!/\.csv$/i.test(f.name)){toast('Need a .csv file','err');return;}
+  fb=f.name.replace(/\.csv$/i,'');
+  currentWeekStart=1;currentCountry=null;
+  var r=new FileReader();r.onload=function(e){loadCSV(e.target.result);};r.readAsText(f);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SIDEBAR
+// ═══════════════════════════════════════════════════════════════
+function renderSB(){
+  var list=$i('sbList');list.innerHTML='';
+  var fil=rows.filter(function(r){
+    if(srch&&!(r.name.toLowerCase().includes(srch)||r.city.toLowerCase().includes(srch)))return false;
+    if(filt==='sales')  return ltype(r)!=='service';
+    if(filt==='service')return ltype(r)!=='sales';
+    return true;
+  });
+  var cits={};fil.forEach(function(r){var c=r.city||'Other';if(!cits[c])cits[c]=[];cits[c].push(r);});
+  Object.keys(cits).sort().forEach(function(city){
+    var g=document.createElement('div');g.className='sb-grp';g.textContent=city;list.appendChild(g);
+    cits[city].forEach(function(r){
+      var t=ltype(r);
+      var el=document.createElement('div');el.className='sb-row'+(cur===r.id?' on':'');el.dataset.id=r.id;
+      el.innerHTML='<div class="sb-dot sd-'+t+'"></div>'+
+        '<div class="sb-info"><div class="sb-name">'+esc(r.name)+'</div><div class="sb-sub">ID '+esc(r.id)+'</div></div>'+
+        '<div class="sb-mod" style="display:'+(mods[r.id]?'block':'none')+'"></div>';
+      el.addEventListener('click',function(){pick(r.id);});
+      list.appendChild(el);
+    });
+  });
+  $i('sbCnt').textContent=rows.length+' location'+(rows.length!==1?'s':'');
+  var n=Object.keys(mods).length;
+  var mc=$i('sbMod');mc.textContent=n+' modified';mc.style.display=n>0?'':'none';
+}
+
+$i('sbQ').addEventListener('input',function(){srch=this.value.toLowerCase();renderSB();});
+$$s('.chip').forEach(function(c){
+  c.addEventListener('click',function(){
+    filt=c.dataset.f;
+    $$s('.chip').forEach(function(x){x.classList.remove('on');});
+    c.classList.add('on');renderSB();
+  });
+});
+
+$i('addBtn').addEventListener('click',function(){
+  var nid='new-'+(Date.now()%1e6);
+  var nr={id:nid,name:'New Location',address:'',www:'/en/b',additional_www:'',phone:'',email:'',
+    tag_class:'sales',tags:'Sales',day_1:'09:00 AM - 06:00 PM',day_2:'09:00 AM - 06:00 PM',
+    day_3:'09:00 AM - 06:00 PM',day_4:'09:00 AM - 06:00 PM',day_5:'09:00 AM - 06:00 PM',
+    day_6:'CLOSED',day_7:'CLOSED',city:'',lat:'',lng:'',headlineid:'',position:''+(rows.length+1)};
+  rows.push(nr);orig.push(cp(nr));mods[nid]=true;renderSB();pick(nid);toast('New location added','ok');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  PICK LOCATION
+// ═══════════════════════════════════════════════════════════════
+function pick(id){
+  cur=id;
+  $$s('.sb-row').forEach(function(el){el.classList.toggle('on',el.dataset.id===id);});
+  $i('emptyEl').style.display='none';
+  $i('tbar').style.display='flex';
+  $i('contentEl').style.display='flex';
+  renderEditor(id);updTbar();
+}
+function updTbar(){
+  var r=find(cur);if(!r)return;
+  $i('tbarName').textContent=r.name||'Unnamed';
+  var brand={lr:'Land Rover',rr:'Range Rover',jag:'Jaguar'}[currentBrand]||'';
+  $i('tbarId').textContent='#'+r.id+(currentCountry?' · '+currentCountry:'')+(brand?' · '+brand:'');
+  $i('modPill').style.display=mods[cur]?'':'none';
+}
+function markMod(id){
+  var r=find(id);var o=orig.find(function(x){return x.id===id;});
+  if(!o){mods[id]=true;}else{var same=COLS.every(function(c){return(r[c]||'')===(o[c]||'');});if(same)delete mods[id];else mods[id]=true;}
+  $$s('.sb-row[data-id="'+id+'"] .sb-mod').forEach(function(el){el.style.display=mods[id]?'block':'none';});
+  var n=Object.keys(mods).length;
+  var mc=$i('sbMod');mc.textContent=n+' modified';mc.style.display=n>0?'':'none';
+  $i('modPill').style.display=mods[id]?'':'none';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EDITOR
+// ═══════════════════════════════════════════════════════════════
+function renderEditor(id){
+  var r=find(id);if(!r)return;
+  var today=todayIndex();
+  var DS=getDS();
+  var ci=$i('cInner');
+  var tc=(r.tag_class||'').toLowerCase();
+  var tg=(r.tags||'').toLowerCase();
+
+  var hHtml='';
+  for(var d=0;d<7;d++){
+    var v=(r['day_'+(d+1)]||'').trim();
+    var cl=v.toUpperCase()==='CLOSED'||v==='';
+    var sh=cl?[]:v.split(/<br\s*\/?>/i).map(function(s){return s.trim();}).filter(Boolean);
+    hHtml+=dayRow(d,sh,cl,d===today,DS);
+  }
+
+  var weekNote=currentWeekStart===1
+    ? 'Mon-first · '+DS.join('·')
+    : 'Sun-first · '+DS.join('·');
+
+  ci.innerHTML=
+    '<div class="slbl">Opening Hours <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">&nbsp;— '+weekNote+'</span></div>'+
+    '<div class="hrs-box">'+
+      '<div id="hBody">'+hHtml+'</div>'+
+      '<div class="qf">'+
+        '<span class="qf-lbl">Quick fill:</span>'+
+        '<button class="btn btn-sm" id="qfCopy">Copy day 1 → all open</button>'+
+        '<button class="btn btn-sm" id="qfAllWeek">All week 9–6</button>'+
+        '<button class="btn btn-sm" id="qfS">Sales pattern</button>'+
+        '<button class="btn btn-sm" id="qfSvc">Service pattern</button>'+
+        '<button class="btn btn-sm btn-ghost" style="margin-left:auto" id="qfClosed">All closed</button>'+
+      '</div>'+
+    '</div>'+
+
+    '<div class="sdiv"></div>'+
+    '<div class="slbl">Location Details</div>'+
+    '<div class="fl"><div class="fl-lbl">Name</div><input class="fi" id="fn" data-field="name" value="'+esc(r.name)+'"></div>'+
+    '<div class="fl"><div class="fl-lbl">Address</div><textarea class="fi" data-field="address" rows="2">'+esc(r.address)+'</textarea></div>'+
+    '<div class="row2">'+
+      '<div class="fl"><div class="fl-lbl">City</div><input class="fi" data-field="city" value="'+esc(r.city)+'"></div>'+
+      '<div class="fl"><div class="fl-lbl">Phone</div><input class="fi mono" data-field="phone" value="'+esc(r.phone)+'"></div>'+
+    '</div>'+
+    '<div class="fl"><div class="fl-lbl">Email</div><input class="fi mono" data-field="email" value="'+esc(r.email)+'"></div>'+
+
+    '<div class="sdiv"></div>'+
+    '<div class="slbl">Type &amp; Tags</div>'+
+    '<div class="tags-row" id="tRow">'+
+      '<button class="tag-btn'+(tc.includes('sales')?' t-sales':'')+'" data-tag="sales">Sales</button>'+
+      '<button class="tag-btn'+(tc.includes('service')?' t-service':'')+'" data-tag="service">Service / Repairs</button>'+
+      '<button class="tag-btn'+(tc.includes('parts')?' t-parts':'')+'" data-tag="parts">Parts</button>'+
+      '<button class="tag-btn'+(tg.includes('used')?' t-used':'')+'" data-tag="used">Approved Used</button>'+
+    '</div>'+
+    '<div class="row2" style="margin-top:8px">'+
+      '<div class="fl"><div class="fl-lbl">tag_class</div><input class="fi mono" id="ftc" data-field="tag_class" value="'+esc(r.tag_class)+'"></div>'+
+      '<div class="fl"><div class="fl-lbl">tags</div><input class="fi mono" id="ftg" data-field="tags" value="'+esc(r.tags)+'"></div>'+
+    '</div>'+
+
+    '<div class="sdiv"></div>'+
+    '<div class="slbl">Links &amp; Coordinates</div>'+
+    '<div class="row2">'+
+      '<div class="fl"><div class="fl-lbl">CTA / www</div><input class="fi mono" data-field="www" value="'+esc(r.www)+'"></div>'+
+      '<div class="fl"><div class="fl-lbl">Google Maps URL</div><input class="fi mono" data-field="additional_www" value="'+esc(r.additional_www)+'"></div>'+
+    '</div>'+
+    '<div class="row4">'+
+      '<div class="fl"><div class="fl-lbl">Latitude</div><input class="fi mono" data-field="lat" value="'+esc(r.lat)+'"></div>'+
+      '<div class="fl"><div class="fl-lbl">Longitude</div><input class="fi mono" data-field="lng" value="'+esc(r.lng)+'"></div>'+
+      '<div class="fl"><div class="fl-lbl">Position</div><input class="fi" data-field="position" type="number" value="'+esc(r.position)+'"></div>'+
+      '<div class="fl"><div class="fl-lbl">Headline ID</div><input class="fi" data-field="headlineid" value="'+esc(r.headlineid)+'"></div>'+
+    '</div>';
+
+  ci.querySelectorAll('input[data-field],textarea[data-field]').forEach(function(inp){
+    inp.addEventListener('input',function(){
+      var r=find(cur);if(!r)return;
+      r[inp.dataset.field]=inp.value;
+      if(inp.dataset.field==='name'){
+        $i('tbarName').textContent=inp.value;
+        var sn=document.querySelector('.sb-row[data-id="'+cur+'"] .sb-name');
+        if(sn)sn.textContent=inp.value;
+      }
+      markMod(cur);
+    });
+  });
+
+  ci.querySelectorAll('.tag-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var map={sales:'t-sales',service:'t-service',parts:'t-parts',used:'t-used'};
+      btn.classList.toggle(map[btn.dataset.tag]);
+      rebuildTags(ci);
+    });
+  });
+
+  bindHrs(ci);
+  bindQF(ci);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DAY ROW BUILDER
+// ═══════════════════════════════════════════════════════════════
+function dayRow(d,shifts,closed,today,DS){
+  var sh='';
+  if(closed){sh='<div class="closed-txt">Closed</div>';}
+  else{
+    shifts.forEach(function(s,si){
+      var p=s.split(/\s*-\s*/);var fr=p[0]||'';var to=p.slice(1).join(' - ').trim();
+      sh+='<div class="srow" data-si="'+si+'">'+
+        '<input class="tin" data-part="from" value="'+esc(fr)+'" placeholder="09:00 AM">'+
+        '<span class="tsep">–</span>'+
+        '<input class="tin" data-part="to"   value="'+esc(to)+'" placeholder="06:00 PM">'+
+        (si>0
+          ?'<button class="sdel" data-si="'+si+'" title="Remove this shift">×</button>'
+          :'<button class="sdel" style="visibility:hidden">×</button>'
+        )+
+      '</div>';
+    });
+    sh+='<button class="sadd" data-d="'+d+'">+ shift</button>';
+  }
+  return '<div class="day-row'+(today?' today':'')+'" data-d="'+d+'">'+
+    '<div class="d-name">'+DS[d]+'</div>'+
+    '<div class="d-tog"><button class="tog'+(closed?'':' open')+'" data-d="'+d+'"></button></div>'+
+    '<div class="d-hrs" id="dh-'+d+'">'+sh+'</div>'+
+  '</div>';
+}
+
+function readDay(d){
+  var t=document.querySelector('.tog[data-d="'+d+'"]');
+  if(!t||!t.classList.contains('open'))return'CLOSED';
+  var dh=document.getElementById('dh-'+d);if(!dh)return'CLOSED';
+  var sh=[];
+  dh.querySelectorAll('.srow').forEach(function(row){
+    var f=row.querySelector('[data-part="from"]').value.trim();
+    var to=row.querySelector('[data-part="to"]').value.trim();
+    if(f||to)sh.push(f+(to?' - '+to:''));
+  });
+  return sh.join(' <br> ')||'CLOSED';
+}
+
+function reHours(){
+  var r=find(cur);if(!r)return;
+  var today=todayIndex();
+  var DS=getDS();
+  var hb=$i('hBody');if(!hb)return;
+  var h='';
+  for(var d=0;d<7;d++){
+    var v=(r['day_'+(d+1)]||'').trim();
+    var cl=v.toUpperCase()==='CLOSED'||v==='';
+    var sh=cl?[]:v.split(/<br\s*\/?>/i).map(function(s){return s.trim();}).filter(Boolean);
+    h+=dayRow(d,sh,cl,d===today,DS);
+  }
+  hb.innerHTML=h;
+  var ci=$i('cInner');
+  bindHrs(ci);
+  bindQF(ci);
+  markMod(cur);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BIND HOURS INTERACTIONS
+// ═══════════════════════════════════════════════════════════════
+function bindHrs(ci){
+  ci.querySelectorAll('.tog').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var d=parseInt(btn.dataset.d);
+      var open=btn.classList.toggle('open');
+      var r=find(cur);if(!r)return;
+      r['day_'+(d+1)]=open?'09:00 AM - 06:00 PM':'CLOSED';
+      reHours();
+    });
+  });
+  ci.querySelectorAll('.sadd').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var d=parseInt(btn.dataset.d);
+      var r=find(cur);if(!r)return;
+      var cur2=(r['day_'+(d+1)]||'').trim();
+      r['day_'+(d+1)]=(cur2&&cur2.toUpperCase()!=='CLOSED'?cur2+' <br> ':'')+'09:00 PM - 12:00 AM';
+      reHours();
+    });
+  });
+  ci.querySelectorAll('.sdel[data-si]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var row=btn.closest('[data-d]');if(!row)return;
+      var d=parseInt(row.dataset.d);
+      var r=find(cur);if(!r)return;
+      var sh=(r['day_'+(d+1)]||'').split(/<br\s*\/?>/i).map(function(s){return s.trim();}).filter(Boolean);
+      sh.splice(parseInt(btn.dataset.si),1);
+      r['day_'+(d+1)]=sh.join(' <br> ')||'CLOSED';
+      reHours();
+    });
+  });
+  ci.querySelectorAll('.tin').forEach(function(inp){
+    inp.addEventListener('change',function(){
+      var row=inp.closest('[data-d]');if(!row)return;
+      var d=parseInt(row.dataset.d);
+      var r=find(cur);if(!r)return;
+      r['day_'+(d+1)]=readDay(d);markMod(cur);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CLOSE SPECIFIC ABSOLUTE DAYS (Eid helper)
+//  dayNames: array of absolute day names e.g. ['Thu','Fri','Sat']
+// ═══════════════════════════════════════════════════════════════
+function closeEidDays(dayNames){
+  var r=find(cur);if(!r)return;
+  var map=getDayMap();
+  var closed=[];
+  dayNames.forEach(function(day){
+    var n=map[day];
+    if(n){r['day_'+n]='CLOSED';closed.push(day);}
+  });
+  reHours();
+  toast('Closed: '+closed.join(' · '),'ok');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  QUICK FILL BUTTON BINDINGS
+// ═══════════════════════════════════════════════════════════════
+function bindQF(ci){
+  var sHrs='09:00 AM - 03:00 PM <br> 09:00 PM - 12:00 AM';
+  var vcHrs='07:30 AM - 05:30 PM';
+
+  ci.querySelector('#qfAllWeek').addEventListener('click',function(){
+    var r=find(cur);if(!r)return;
+    for(var d=1;d<=7;d++)r['day_'+d]='09:00 AM - 06:00 PM';
+    reHours();toast('All 7 days → 09:00 AM – 06:00 PM','ok');
+  });
+
+  ci.querySelector('#qfS').addEventListener('click',function(){
+    var r=find(cur);if(!r)return;
+    // Mon-first: Mon(1)Tue(2)Wed(3)Sat(6)Sun(7)=open, Thu(4)Fri(5)=closed
+    // Sun-first: Sun(1)Mon(2)Tue(3)Sat(7)=open, Wed(4)Thu(5)Fri(6)=closed
+    if(currentWeekStart===1){
+      r['day_1']=sHrs;r['day_2']=sHrs;r['day_3']=sHrs;
+      r['day_4']='CLOSED';r['day_5']='CLOSED';
+      r['day_6']=sHrs;r['day_7']=sHrs;
+    } else {
+      r['day_1']=sHrs;r['day_2']=sHrs;r['day_3']=sHrs;
+      r['day_4']='CLOSED';r['day_5']='CLOSED';r['day_6']='CLOSED';
+      r['day_7']=sHrs;
+    }
+    reHours();toast('Sales pattern applied','ok');
+  });
+
+  ci.querySelector('#qfSvc').addEventListener('click',function(){
+    var r=find(cur);if(!r)return;
+    if(currentWeekStart===1){
+      // Mon–Fri open, Sat–Sun closed
+      for(var d=1;d<=5;d++)r['day_'+d]=vcHrs;
+      r['day_6']='CLOSED';r['day_7']='CLOSED';
+    } else {
+      // Mon–Fri open (day2–day6), Sun+Sat closed
+      r['day_1']='CLOSED';
+      for(var d=2;d<=6;d++)r['day_'+d]=vcHrs;
+      r['day_7']='CLOSED';
+    }
+    reHours();toast('Service pattern applied','ok');
+  });
+
+  ci.querySelector('#qfCopy').addEventListener('click',function(){
+    var r=find(cur);if(!r)return;
+    var m=r['day_1'];
+    for(var d=2;d<=7;d++){if((r['day_'+d]||'').toUpperCase()!=='CLOSED')r['day_'+d]=m;}
+    reHours();toast('Day 1 hours copied to all open days','ok');
+  });
+
+  ci.querySelector('#qfClosed').addEventListener('click',function(){
+    var r=find(cur);if(!r)return;
+    for(var d=1;d<=7;d++)r['day_'+d]='CLOSED';
+    reHours();toast('All days set to CLOSED','ok');
+  });
+}
+
+function rebuildTags(ci){
+  var hasSales=ci.querySelector('[data-tag="sales"]').classList.contains('t-sales');
+  var hasSvc=ci.querySelector('[data-tag="service"]').classList.contains('t-service');
+  var hasParts=ci.querySelector('[data-tag="parts"]').classList.contains('t-parts');
+  var hasUsed=ci.querySelector('[data-tag="used"]').classList.contains('t-used');
+  var cls=[],lbl=[];
+  if(hasSales){cls.push('sales');lbl.push('Sales');}
+  if(hasSvc){cls.push('services');lbl.push('Repairs');}
+  if(hasParts){cls.push('parts');lbl.push('Parts');}
+  if(hasUsed)lbl.push('Approved Used');
+  var tc=cls.join(', '),tg=lbl.join(', ');
+  var r=find(cur);if(!r)return;
+  r.tag_class=tc;r.tags=tg;
+  var ftc=document.getElementById('ftc');if(ftc)ftc.value=tc;
+  var ftg=document.getElementById('ftg');if(ftg)ftg.value=tg;
+  markMod(cur);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RESET
+// ═══════════════════════════════════════════════════════════════
+$i('resetBtn').addEventListener('click',function(){
+  if(!cur)return;
+  var o=orig.find(function(x){return x.id===cur;});if(!o)return;
+  var idx=rows.findIndex(function(r){return r.id===cur;});
+  rows[idx]=cp(o);delete mods[cur];renderSB();renderEditor(cur);updTbar();
+  toast('Reset to original','ok');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  APPLY HOURS MODAL
+// ═══════════════════════════════════════════════════════════════
+$i('applyBtn').addEventListener('click',function(){
+  if(!cur)return;
+  var ml=$i('mList');ml.innerHTML='';
+  rows.filter(function(r){return r.id!==cur;}).forEach(function(r){
+    var el=document.createElement('div');el.className='m-item';
+    el.innerHTML='<input type="checkbox" value="'+r.id+'"> <span>'+esc(r.name)+'</span><span class="m-city">'+esc(r.city)+'</span>';
+    ml.appendChild(el);
+  });
+  $i('overlay').classList.add('open');
+});
+$i('mCancel').addEventListener('click',function(){$i('overlay').classList.remove('open');});
+$i('mConfirm').addEventListener('click',function(){
+  var src=find(cur);if(!src)return;
+  var hrs={};for(var d=1;d<=7;d++)hrs['day_'+d]=src['day_'+d];
+  var tgts=$$s('#mList input:checked').map(function(i){return i.value;});
+  tgts.forEach(function(id){var r=find(id);if(!r)return;Object.assign(r,hrs);mods[id]=true;});
+  $i('overlay').classList.remove('open');
+  renderSB();toast('Hours applied to '+tgts.length+' location(s)','ok');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  EXPORT CSV
+// ═══════════════════════════════════════════════════════════════
+$i('exportBtn').addEventListener('click',function(){
+  if(cur){
+    $$s('#cInner input[data-field],#cInner textarea[data-field]').forEach(function(inp){
+      var r=find(cur);if(r)r[inp.dataset.field]=inp.value;
+    });
+  }
+  var csv=COLS.join(',')+'\r\n'+rows.map(function(r){
+    return COLS.map(function(c){
+      var v=String(r[c]==null?'':r[c]);
+      return(/[,"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v);
+    }).join(',');
+  }).join('\r\n');
+  var b=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.style.display='none';
+  var d=new Date();var p=function(n){return String(n).padStart(2,'0');};
+  a.download=fb+'-edited-'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'.csv';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(a.href);},200);
+  toast('Exported '+rows.length+' rows','ok');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+buildCountryGrid();
+
+})();
+</script>
+
+<!-- Shared footer -->
+<footer class="rf-footer" style="background:#0a0b0d;border-top:1px solid rgba(255,255,255,0.06);padding:1.25rem 2rem;font-family:Inter,sans-serif;">
+  <div style="max-width:1400px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+    <span style="font-size:0.6rem;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:rgba(138,142,156,0.32);">Reffine · MENA · JLR Hub</span>
+    <div style="display:flex;align-items:center;gap:2px;flex-wrap:wrap;">
+      <a href="index.html"            style="padding:.28rem .65rem;border-radius:4px;font-size:.67rem;font-weight:500;color:#8a8e9c;text-decoration:none;" data-rfpage="index">Dashboard</a>
+      <a href="translation.html"      style="padding:.28rem .65rem;border-radius:4px;font-size:.67rem;font-weight:500;color:#8a8e9c;text-decoration:none;" data-rfpage="translation">Translate</a>
+      <a href="seo-tool.html"         style="padding:.28rem .65rem;border-radius:4px;font-size:.67rem;font-weight:500;color:#8a8e9c;text-decoration:none;" data-rfpage="seo-tool">SEO</a>
+      <a href="offer-generator.html"  style="padding:.28rem .65rem;border-radius:4px;font-size:.67rem;font-weight:500;color:#8a8e9c;text-decoration:none;" data-rfpage="offer-generator">Offers</a>
+      <a href="retailer-locator.html" style="padding:.28rem .65rem;border-radius:4px;font-size:.67rem;font-weight:500;color:#00d084;text-decoration:none;" data-rfpage="retailer-locator">Retailers</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLR Hub — Reffine MENA Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:          #0a0b0d;
+            --surface:     #111316;
+            --surface-2:   #16181c;
+            --nav:         #0a0b0d;
+            --card:        #111316;
+            --card-hov:    #16181c;
+            --border:      rgba(255,255,255,0.06);
+            --border-hov:  rgba(255,255,255,0.14);
+            --text:        #f5f5f5;
+            --text-2:      #8a8e9c;
+            --text-3:      rgba(138,142,156,0.5);
+            --lr:          #00d084;
+            --lr-dim:      rgba(0,208,132,0.1);
+            --rr:          #c9a96e;
+            --rr-dim:      rgba(201,169,110,0.1);
+            --jag:         #e8424a;
+            --jag-dim:     rgba(232,66,74,0.1);
+            --accent:      #00d084;
+            --accent-dim:  rgba(0,208,132,0.1);
+            --nav-h:       60px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; font-size: 14px; }
+
+        /* Subtle grid bg texture like reffine */
+        body::before {
+            content: '';
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        body::after {
+            content: '';
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0,208,132,0.05) 0%, transparent 70%);
+        }
+
+
+        /* ── GLOBE BG ── */
+        #globe-bg {
+            position: fixed;
+            top: 0; right: -10%;
+            width: 75vmax; height: 75vmax;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.55;
+        }
+        #globe-bg canvas { width: 100% !important; height: 100% !important; }
+        /* ── TOP NAV ── */
+        .topnav {
+            position: fixed; top: 0; left: 0; right: 0; height: var(--nav-h);
+            background: rgba(10,11,13,0.92);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center;
+            padding: 0 2rem; gap: 1.5rem;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+        .nav-logo {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--text); white-space: nowrap; flex-shrink: 0;
+        }
+        .nav-logo .dot { color: var(--accent); font-size: 1.4rem; line-height: 0; }
+        .nav-logo span { color: var(--accent); }
+        .nav-sub {
+            font-size: 0.65rem; font-weight: 500; letter-spacing: 0.15em;
+            text-transform: uppercase; color: var(--text-3); white-space: nowrap;
+            flex-shrink: 0; padding-left: 1rem; border-left: 1px solid var(--border);
+        }
+
+        /* Clocks in nav */
+        .nav-clocks { display: flex; align-items: center; gap: 1rem; margin-left: auto; }
+        .nav-clock { display: flex; align-items: center; gap: 0.5rem; }
+        .nav-clock canvas { border-radius: 50%; flex-shrink: 0; }
+        .nav-clock-info { display: flex; flex-direction: column; }
+        .nav-clock-city { font-size: 0.58rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
+        .nav-clock-time { font-size: 0.82rem; font-weight: 600; color: var(--text); letter-spacing: 0.05em; font-variant-numeric: tabular-nums; }
+        .nav-divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+
+        /* Mode pills in nav */
+        .nav-modes { display: flex; align-items: center; gap: 0; padding: 3px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 6px; flex-shrink: 0; }
+        .nav-modes input { display: none; }
+        .nav-modes label { padding: 0.38rem 0.9rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; color: var(--text-2); cursor: pointer; transition: all 0.15s; white-space: nowrap; user-select: none; letter-spacing: 0.03em; }
+        .nav-modes label:hover { color: var(--text); }
+        .nav-modes input:checked + label { background: var(--surface-2); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+
+        /* ── FILTER BAR ── */
+        .mobile-filterbar {
+            display: flex;
+            position: fixed;
+            top: var(--nav-h);
+            left: 0; right: 0;
+            background: rgba(10,11,13,0.95);
+            border-bottom: 1px solid var(--border);
+            z-index: 90;
+            scrollbar-width: none;
+            backdrop-filter: blur(12px);
+        }
+        .mobile-filterbar::-webkit-scrollbar { display: none; }
+        .filterbar-row {
+            display: flex; align-items: center;
+            gap: 0.5rem; padding: 0.5rem 2rem;
+            overflow-x: auto; white-space: nowrap;
+            scrollbar-width: none; flex-shrink: 0; width: 100%;
+        }
+        .filterbar-row::-webkit-scrollbar { display: none; }
+        .filterbar-row-2 {
+            border-top: 1px solid var(--border);
+            padding: 0.4rem 2rem;
+        }
+        .mobile-filter-divider { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; margin: 0 0.25rem; }
+        .mobile-brand-btn {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.3rem 0.9rem; border-radius: 20px;
+            font-size: 0.7rem; font-weight: 600; letter-spacing: 0.03em;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text-2); cursor: pointer; transition: all 0.18s;
+            flex-shrink: 0;
+        }
+        .mobile-brand-btn:hover { color: var(--text); border-color: var(--border-hov); background: var(--surface); }
+        .mobile-brand-btn.active-lrdx { background: var(--lr-dim); border-color: rgba(0,208,132,0.45); color: var(--lr); box-shadow: 0 0 0 3px rgba(0,208,132,0.08); font-weight: 700; }
+        .mobile-brand-btn.active-rr   { background: var(--rr-dim); border-color: rgba(201,169,110,0.45); color: var(--rr); box-shadow: 0 0 0 3px rgba(201,169,110,0.08); font-weight: 700; }
+        .mobile-brand-btn.active-jdx  { background: var(--jag-dim); border-color: rgba(232,66,74,0.45); color: var(--jag); box-shadow: 0 0 0 3px rgba(232,66,74,0.08); font-weight: 700; }
+        .mobile-region-btn {
+            display: inline-flex; align-items: center;
+            padding: 0.25rem 0.75rem; border-radius: 20px;
+            font-size: 0.68rem; font-weight: 600; letter-spacing: 0.02em;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text-2); cursor: pointer; transition: all 0.18s;
+            flex-shrink: 0;
+        }
+        .mobile-region-btn:hover { color: var(--text); border-color: var(--border-hov); background: var(--surface); }
+        .mobile-region-btn.active { background: var(--accent-dim); border-color: rgba(0,208,132,0.45); color: var(--accent); font-weight: 700; }
+
+        /* Search inside filterbar */
+        .filterbar-search { position: relative; flex-shrink: 0; }
+        .filterbar-search svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+        .filterbar-search input { padding: 0.32rem 0.75rem 0.32rem 1.9rem; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.72rem; font-weight: 500; width: 140px; outline: none; transition: all 0.15s; font-family: inherit; }
+        .filterbar-search input::placeholder { color: var(--text-3); }
+        .filterbar-search input:focus { border-color: var(--border-hov); background: var(--surface-2); width: 180px; }
+
+        /* ── LAYOUT ── */
+        .layout {
+            position: relative; z-index: 1;
+            /* No padding-top here — panels use sticky top to sit below nav+filterbar */
+            min-height: 100vh;
+            display: flex; align-items: stretch;
+        }
+
+        /* ── LEFT PANEL — site links (40%) ── */
+        .main {
+          flex: 0 0 40%;
+          min-width: 260px;
+          padding: 1.5rem;
+          border-right: 1px solid var(--border);
+          overflow-y: auto;
+          height: calc(100vh - 132px);
+          position: sticky; top: 132px;
+          transition: flex 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                      opacity 0.3s ease, padding 0.3s ease;
+        }
+
+        /* ── RIGHT PANEL — Week Planner (60%) ── */
+        .tempo-panel {
+          flex: 1;
+          min-width: 0;
+          height: calc(100vh - 132px);
+          position: sticky; top: 132px;
+          background: var(--bg);
+          display: flex; align-items: stretch;
+        }
+
+        .tempo-inner {
+          width: 100%; height: 100%;
+          padding: 1.25rem 2rem;
+          display: flex; flex-direction: column;
+        }
+
+        /* Collapsed: hide left panel */
+        .layout.left-hidden .main {
+          flex: 0 0 0 !important;
+          min-width: 0 !important;
+          padding-left: 0 !important; padding-right: 0 !important;
+          border-right: none; overflow: hidden; opacity: 0;
+        }
+        .layout.left-hidden .tempo-panel { flex: 1; }
+
+        @media (max-width: 900px) {
+          .layout { flex-direction: column; }
+          .main {
+            flex: none; width: 100%; height: auto;
+            position: static; margin-top: 132px;
+            border-right: none; border-bottom: 1px solid var(--border);
+            padding: 1.25rem 1rem;
+            overflow-x: hidden;
+          }
+          .tempo-panel {
+            flex: none; width: 100%;
+            height: calc(100vh - 132px);
+            position: sticky; top: 132px;
+            margin-top: 0;
+          }
+          .tempo-inner { padding: 1rem; }
+        }
+
+        /* ── GROUP SECTION ── */
+        .group-section { margin-bottom: 1rem; display: flex; flex-direction: column; align-items: flex-start; }
+        .group-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; width: 100%; }
+        .group-label { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-3); }
+        .group-line { display: none; }
+        .group-count { font-size: 0.58rem; font-weight: 700; color: var(--accent); background: var(--accent-dim); border: 1px solid rgba(0,208,132,0.2); padding: 0.1rem 0.5rem; border-radius: 20px; margin-left: auto; }
+
+        /* ── GRID ── */
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.35rem; width: 100%; align-items: stretch; }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 7px; padding: 0.45rem 0.6rem;
+            transition: border-color 0.18s, background 0.18s, transform 0.18s, box-shadow 0.18s;
+            display: flex; flex-direction: row; align-items: center;
+            justify-content: space-between; gap: 0.4rem;
+            position: relative; overflow: hidden;
+        }
+        .card:hover { border-color: var(--border-hov); background: var(--card-hov); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .card-left { display: flex; align-items: center; gap: 0.4rem; min-width: 0; flex-shrink: 1; }
+        .card-flag { width: 20px; height: 15px; border-radius: 2px; flex-shrink: 0; object-fit: cover; display: block; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+        .card-name { font-size: 0.67rem; font-weight: 600; color: var(--text); letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-links { display: flex; flex-wrap: wrap; gap: 0.2rem; justify-content: flex-end; flex-shrink: 0; }
+
+        /* Lang badges */
+        .link-badge {
+            text-decoration: none; color: var(--text-2); background: rgba(255,255,255,0.04);
+            padding: 0.18rem 0.45rem; border-radius: 4px; font-size: 0.56rem;
+            font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+            transition: all 0.15s; border: 1px solid var(--border);
+            display: inline-flex; align-items: center; gap: 0.2rem;
+        }
+        .link-badge:hover { color: var(--text); border-color: var(--border-hov); background: var(--surface-2); }
+        .lock-icon { display: none; width: 9px; height: 9px; fill: currentColor; flex-shrink: 0; }
+        body.cms-mode-active .lock-icon { display: block; }
+        .brand-lrdx .link-badge:hover { background: var(--lr-dim); border-color: rgba(0,208,132,0.3); color: var(--lr); }
+        .brand-rr   .link-badge:hover { background: var(--rr-dim); border-color: rgba(201,169,110,0.3); color: var(--rr); }
+        .brand-jdx  .link-badge:hover { background: var(--jag-dim); border-color: rgba(232,66,74,0.3); color: var(--jag); }
+
+        /* ── NO RESULTS ── */
+        .no-results { display:none; text-align:center; padding:5rem 2rem; color:var(--text-3); font-size:0.85rem; background:var(--card); border:1px solid var(--border); border-radius:6px; }
+
+        /* ── CLOCKS (big, mobile only) ── */
+        .clocks-row { display: none; justify-content: center; align-items: flex-start; gap: 4rem; padding: 2rem 0 1.5rem; flex-wrap: wrap; }
+        .clock-section { display: flex; flex-direction: column; align-items: center; }
+        .clock-section canvas { border-radius: 50%; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
+        .clock-big-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-3); margin-bottom: 1rem; }
+        .clock-big-time { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.15em; color: var(--text-2); margin-top: 0.9rem; font-variant-numeric: tabular-nums; }
+        .clocks-divider { width: 1px; height: 180px; background: var(--border); align-self: center; }
+
+        /* ── EMAILS ── */
+        .email-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 1.4rem; margin-bottom: 1rem; transition: border-color 0.15s; }
+        .email-card:hover { border-color: var(--border-hov); }
+        .email-card-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.1rem; gap: 1rem; }
+        .email-card-title { font-size: 0.92rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 0.6rem; letter-spacing: 0.02em; }
+        .email-card-title::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+        .email-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .email-box-label { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; }
+        .email-box { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.9rem 1rem; font-size: 0.78rem; line-height: 1.7; color: var(--text-2); white-space: pre-wrap; font-family: inherit; }
+        .copy-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-3); border-radius: 3px; padding: 0.2rem 0.55rem; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; transition: all 0.15s; font-family: inherit; text-transform: uppercase; }
+        .copy-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-hov); }
+        .copy-btn.copied { color: var(--accent); border-color: rgba(0,208,132,0.4); background: var(--accent-dim); }
+        .recipients-box { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; }
+        .recip-group { padding: 0.85rem 1rem; }
+        .recip-group + .recip-group { border-top: 1px solid var(--border); }
+        .recip-group-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+        .recip-group-label { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3); }
+        .recip-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+        .recip-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 0.22rem 0.6rem; font-size: 0.7rem; color: var(--text-2); word-break: break-word; }
+
+
+        /* ── TOOLS ── */
+        .tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+        .tool-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+            padding: 1.4rem; display: flex; flex-direction: column; gap: 0.9rem;
+            text-decoration: none; transition: border-color 0.15s, background 0.15s, transform 0.15s;
+            position: relative; overflow: hidden;
+        }
+        .tool-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, var(--accent), transparent);
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .tool-card:hover { border-color: var(--border-hov); background: var(--card-hov); transform: translateY(-2px); }
+        .tool-card:hover::before { opacity: 1; }
+        .tool-card-icon {
+            width: 36px; height: 36px; border-radius: 6px;
+            background: var(--accent-dim); border: 1px solid rgba(0,208,132,0.2);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .tool-card-icon svg { width: 18px; height: 18px; color: var(--accent); }
+        .tool-card-name { font-size: 0.9rem; font-weight: 700; color: var(--text); letter-spacing: 0.01em; }
+        .tool-card-url { font-size: 0.68rem; color: var(--text-3); letter-spacing: 0.02em; }
+        .tool-card-arrow {
+            margin-top: auto; display: flex; align-items: center; gap: 0.4rem;
+            font-size: 0.7rem; font-weight: 600; color: var(--accent);
+            letter-spacing: 0.05em; text-transform: uppercase;
+        }
+
+        /* MEETING CARDS */
+        .meeting-cards { display: flex; gap: 0.5rem; align-items: stretch; }
+        .meeting-card {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            border-radius: 5px; padding: 0.35rem 0.7rem;
+            display: flex; flex-direction: column; gap: 0.1rem;
+            text-decoration: none; transition: border-color 0.15s, background 0.15s;
+            min-width: 110px; cursor: pointer;
+        }
+        .meeting-card:hover { border-color: var(--border-hov); background: rgba(255,255,255,0.06); }
+        .meeting-card.active-meeting { border-color: rgba(0,208,132,0.5); background: rgba(0,208,132,0.07); }
+        .meeting-card-title { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-2); white-space: nowrap; }
+        .meeting-card-countdown { font-size: 0.82rem; font-weight: 700; color: var(--text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+        .meeting-card-countdown.soon { color: var(--accent); }
+        .meeting-card-countdown.now  { color: #e8424a; animation: pulse-m 1s infinite; }
+        .meeting-card-sub { font-size: 0.56rem; color: var(--text-3); white-space: nowrap; }
+        @keyframes pulse-m { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        .meeting-card { min-width: 130px; }
+        @media (max-width: 1100px) { .meeting-cards { display: none; } }
+        /* ── RESPONSIVE ── */
+        /* ── MOBILE MEETING STRIP ── */
+        .mobile-meeting-strip {
+            display: none;
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 91;
+            background: rgba(10,11,13,0.97);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 0.5rem 1rem;
+            gap: 0.5rem;
+            overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+            backdrop-filter: blur(16px);
+        }
+        .mobile-meeting-strip::-webkit-scrollbar { display: none; }
+        .mobile-meeting-card {
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+            flex-shrink: 0; padding: 0.45rem 1rem;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 6px; text-decoration: none; min-width: 100px;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .mobile-meeting-card:hover, .mobile-meeting-card.active-meeting {
+            border-color: rgba(0,208,132,0.4); background: rgba(0,208,132,0.06);
+        }
+        .mobile-meeting-card-title {
+            font-size: 0.56rem; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--text-2);
+        }
+        .mobile-meeting-card-countdown {
+            font-size: 0.88rem; font-weight: 700; color: var(--text);
+            letter-spacing: 0.04em; font-variant-numeric: tabular-nums;
+        }
+        .mobile-meeting-card-countdown.soon { color: var(--accent); }
+        .mobile-meeting-card-countdown.now { color: #e8424a; animation: pulse-m 1s infinite; }
+        .mobile-meeting-card-sub { font-size: 0.52rem; color: var(--text-3); white-space: nowrap; }
+
+        @media (max-width: 900px) { .email-two-col { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) {
+            .clocks-row { display: flex; }
+            .topnav {
+                padding: 0 0.75rem;
+                overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+                flex-wrap: nowrap; gap: 0.5rem;
+            }
+            .topnav::-webkit-scrollbar { display: none; }
+            .mobile-filterbar { padding: 0.5rem 1rem; }
+            .nav-sub { display: none; }
+            .nav-clocks { display: none; }
+            .email-two-col { grid-template-columns: 1fr; }
+            .nav-logo { font-size: 0.8rem; letter-spacing: 0.06em; white-space: nowrap; flex-shrink: 0; }
+            .nav-modes { flex-shrink: 0; }
+            .mobile-meeting-strip { display: flex; }
+            .grid { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
+        }
+        @media (max-width: 480px) {
+            .clocks-row { flex-direction: column; align-items: center; gap: 1.5rem; }
+            .clocks-divider { display: none; }
+            .nav-logo { font-size: 0.75rem; }
+            .nav-modes label { padding: 0.28rem 0.45rem; font-size: 0.6rem; }
+            .grid { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
+        }
+
+    
+
+/* ═══════════════════════════════════════════════════
+   REFFINE SHARED NAV CSS — same on all pages
+═══════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root { --border: rgba(255,255,255,0.07); --border-hov: rgba(255,255,255,0.14); --text: #f5f5f5; --text-2: #8a8e9c; --text-3: rgba(138,142,156,0.5); --accent: #00d084; }
+
+.rf-topnav {
+  position: fixed; top: 0; left: 0; right: 0; height: 60px;
+  background: rgba(10,11,13,0.96); border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex; align-items: center; padding: 0 1.5rem; gap: 0.75rem;
+  z-index: 9999; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  font-family: 'Inter', sans-serif; box-sizing: border-box; overflow: hidden;
+}
+.rf-nav-logo {
+  display: flex; flex-direction: column; gap: 1px; line-height: 1.1;
+  text-decoration: none; flex-shrink: 0; white-space: nowrap;
+}
+.rf-nav-logo .rf-logo-main { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; color: #f5f5f5; }
+.rf-nav-logo .rf-logo-sub  { font-size: 0.48rem; font-weight: 500; letter-spacing: 0.18em; color: rgba(138,142,156,0.45); text-transform: uppercase; }
+.rf-dot { color: #00d084; }
+.rf-topnav-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.08); flex-shrink: 0; }
+.rf-nav-right { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.rf-navlink {
+  padding: 0.3rem 0.65rem; border-radius: 4px; font-size: 0.66rem; font-weight: 600;
+  letter-spacing: 0.04em; color: #8a8e9c; text-decoration: none; transition: all 0.15s;
+  white-space: nowrap; border: 1px solid transparent; cursor: pointer;
+  background: none; font-family: 'Inter', sans-serif;
+}
+.rf-navlink:hover { color: #f5f5f5; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.06); }
+.rf-navlink.rf-active { color: #00d084; background: rgba(0,208,132,0.08); border-color: rgba(0,208,132,0.18); }
+
+/* Clocks */
+.rf-nav-clock { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+.rf-nav-clock canvas { border-radius: 50%; }
+.rf-clock-city { font-size: 0.52rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(138,142,156,0.5); display: block; }
+.rf-clock-time { font-size: 0.75rem; font-weight: 600; color: #f5f5f5; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; display: block; }
+
+/* Meeting countdown cards */
+.rf-meeting-cards { display: flex; gap: 0.4rem; align-items: stretch; flex-shrink: 0; }
+.rf-meeting-card {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 5px; padding: 0.28rem 0.6rem;
+  display: flex; flex-direction: column; gap: 0; text-decoration: none;
+  transition: border-color 0.15s; min-width: 100px; cursor: pointer;
+}
+.rf-meeting-card:hover { border-color: rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); }
+.rf-meeting-card.active-meeting { border-color: rgba(0,208,132,0.5); background: rgba(0,208,132,0.07); }
+.rf-meeting-title { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8a8e9c; white-space: nowrap; }
+.rf-meeting-countdown { font-size: 0.72rem; font-weight: 700; color: #f5f5f5; letter-spacing: 0.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rf-meeting-countdown.soon { color: #00d084; }
+.rf-meeting-countdown.now  { color: #e8424a; animation: rf-pulse 1s infinite; }
+.rf-meeting-sub { font-size: 0.48rem; color: rgba(138,142,156,0.5); white-space: nowrap; }
+@keyframes rf-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* Right section (clocks + cards) */
+.rf-right-section { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; flex-shrink: 0; }
+
+/* Hamburger */
+.rf-hamburger {
+  display: none; background: none; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px; padding: 6px 8px; cursor: pointer; flex-direction: column;
+  align-items: center; justify-content: center; flex-shrink: 0; gap: 4px;
+}
+.rf-hamburger span { display: block; width: 18px; height: 1.5px; background: #f5f5f5; border-radius: 2px; transition: all 0.25s; }
+.rf-hamburger.open span:nth-child(1) { transform: translateY(5.5px) rotate(45deg); }
+.rf-hamburger.open span:nth-child(2) { opacity: 0; }
+.rf-hamburger.open span:nth-child(3) { transform: translateY(-5.5px) rotate(-45deg); }
+
+/* Mobile drawer */
+.rf-mobile-drawer {
+  display: none; position: fixed; top: 60px; left: 0; right: 0; z-index: 9998;
+  background: rgba(10,11,13,0.98); border-bottom: 1px solid rgba(255,255,255,0.09);
+  padding: 0.75rem 1.5rem 1rem; flex-direction: column; gap: 2px;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.rf-mobile-drawer.open { display: flex; }
+.rf-drawer-link {
+  padding: 0.65rem 0.75rem; border-radius: 5px; font-size: 0.78rem; font-weight: 600;
+  color: #8a8e9c; text-decoration: none; border: 1px solid transparent; display: flex; align-items: center; gap: 8px;
+  background: none; font-family: 'Inter', sans-serif; cursor: pointer;
+}
+.rf-drawer-link:hover { color: #f5f5f5; background: rgba(255,255,255,0.04); }
+.rf-drawer-link.rf-active { color: #00d084; background: rgba(0,208,132,0.07); border-color: rgba(0,208,132,0.15); }
+
+/* Footer */
+.rf-footer { background: #0a0b0d; border-top: 1px solid rgba(255,255,255,0.06); padding: 1.25rem 2rem; font-family: 'Inter', sans-serif; }
+.rf-footer-inner { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.rf-footer-brand { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(138,142,156,0.32); }
+.rf-footer-links { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.rf-footer-link { padding: 0.28rem 0.65rem; border-radius: 4px; font-size: 0.67rem; font-weight: 500; letter-spacing: 0.04em; color: #8a8e9c; text-decoration: none; transition: color 0.15s; }
+.rf-footer-link:hover { color: #f5f5f5; }
+.rf-footer-link.rf-active { color: #00d084; }
+
+@media (max-width: 1200px) { .rf-right-section { display: none !important; } }
+
+
+
+@media (max-width: 1100px) { .rf-nav-right { display: none !important; } .rf-hamburger { display: flex !important; } }
+
+/* ── LIGHT THEME EXTRA FIXES ── */
+/* Clock text */
+body.rf-light .rf-clock-time { color: #0f1117 !important; }
+body.rf-light .rf-clock-city { color: rgba(82,89,107,0.6) !important; }
+
+/* Nav dividers */
+body.rf-light .rf-topnav-divider,
+body.rf-light [style*="background:rgba(255,255,255,0.08)"] { background: rgba(0,0,0,0.1) !important; }
+
+/* Meeting cards */
+body.rf-light .rf-meeting-title { color: #52596b; }
+body.rf-light .rf-meeting-sub { color: rgba(82,89,107,0.6); }
+body.rf-light .rf-meeting-countdown { color: #0f1117; }
+body.rf-light .rf-meeting-card { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); }
+body.rf-light .rf-meeting-card:hover { background: rgba(0,0,0,0.07); border-color: rgba(0,0,0,0.16); }
+
+/* Hamburger */
+body.rf-light .rf-hamburger { border-color: rgba(0,0,0,0.15); }
+body.rf-light .rf-hamburger span { background: #1a1d23; }
+
+/* Theme button */
+body.rf-light .rf-theme-btn { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.13) !important; color: #52596b !important; }
+body.rf-light .rf-theme-btn:hover { background: rgba(0,0,0,0.1) !important; color: #0f1117 !important; }
+
+/* ── INDEX PAGE: filter bar + week planner ── */
+body.rf-light .mobile-filterbar { background: rgba(255,255,255,0.97) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .filterbar-row { background: transparent; }
+body.rf-light .filterbar-row-2 { border-top-color: rgba(0,0,0,0.08) !important; }
+body.rf-light .mobile-brand-btn { color: #52596b; border-color: rgba(0,0,0,0.12); background: transparent; }
+body.rf-light .mobile-brand-btn:hover { color: #0f1117; border-color: rgba(0,0,0,0.2); background: rgba(0,0,0,0.04); }
+body.rf-light .mobile-brand-btn.active-lrdx { background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.35); color: #007d50; }
+body.rf-light .mobile-brand-btn.active-rr   { background: rgba(180,130,60,0.1); border-color: rgba(180,130,60,0.35); color: #8a6020; }
+body.rf-light .mobile-brand-btn.active-jdx  { background: rgba(200,50,50,0.1); border-color: rgba(200,50,50,0.35); color: #b01010; }
+body.rf-light .mobile-region-btn { color: #52596b; border-color: rgba(0,0,0,0.12); background: transparent; }
+body.rf-light .mobile-region-btn.active { background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.3); color: #007d50; }
+body.rf-light .nav-modes { background: rgba(0,0,0,0.04) !important; border-color: rgba(0,0,0,0.1) !important; }
+body.rf-light .nav-modes label { color: #52596b; }
+body.rf-light .nav-modes input:checked + label { background: #fff; color: #0f1117; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+body.rf-light #searchInput { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); color: #0f1117; }
+
+/* Week planner colours */
+body.rf-light #tempoCalendar,
+body.rf-light .tempo-inner { background: #f0f2f5; }
+body.rf-light #tpGrid > div[style*="#0d0f12"],
+body.rf-light [style*="background:#0d0f12"] { background: #e8eaed !important; }
+body.rf-light [style*="background:rgba(255,255,255,.04)"],
+body.rf-light [style*="background:rgba(255,255,255,.025)"] { border-color: rgba(0,0,0,0.07) !important; }
+body.rf-light [style*="color:#f0f0f0"],
+body.rf-light [style*="color: #f0f0f0"] { color: #0f1117 !important; }
+body.rf-light [style*="color:rgba(138,142,156,.75)"] { color: #52596b !important; }
+body.rf-light [style*="color:#00d084"][style*="font-weight:800"],
+body.rf-light [style*="color:#00d084"][style*="font-size:.82rem"] { color: #007d50 !important; }
+body.rf-light [style*="rgba(255,255,255,.08)"] { border-color: rgba(0,0,0,0.09) !important; }
+body.rf-light [style*="rgba(255,255,255,.07)"] { border-color: rgba(0,0,0,0.08) !important; }
+body.rf-light [style*="rgba(0,208,132,.018)"] { background: rgba(0,166,106,0.04) !important; }
+body.rf-light [style*="rgba(0,208,132,.05)"] { background: rgba(0,166,106,0.08) !important; }
+body.rf-light [style*="rgba(138,142,156,.65)"] { color: #8a8e9c !important; }
+body.rf-light [style*="rgba(138,142,156,.25)"] { color: rgba(82,89,107,0.35) !important; }
+body.rf-light [style*="rgba(138,142,156,.45)"] { color: rgba(82,89,107,0.55) !important; }
+
+/* Panel toggle button */
+body.rf-light .panel-toggle-btn { background: #fff; border-color: rgba(0,0,0,0.2); color: #52596b; }
+
+/* ── TRANSLATION PAGE ── */
+body.rf-light .translation-wrap { background: #fff; border-color: rgba(0,0,0,0.1); }
+body.rf-light .lang-bar { border-bottom-color: rgba(0,0,0,0.08); }
+body.rf-light .lang-select { background: #f5f7fa; border-color: rgba(0,0,0,0.12); color: #0f1117; }
+body.rf-light .mode-tabs { border-bottom-color: rgba(0,0,0,0.08); }
+body.rf-light .mode-tab { color: #52596b; }
+body.rf-light .mode-tab.active { color: #007d50; border-bottom-color: #00a66a; }
+body.rf-light .panel-textarea { color: #0f1117; }
+body.rf-light .panel-textarea.output-area { background: rgba(0,0,0,0.02); }
+body.rf-light .text-bottom-bar { border-top-color: rgba(0,0,0,0.08); background: transparent; }
+
+
+/* ─── LIGHT THEME ─── */
+body.rf-light {
+  --bg:         #f0f2f5;
+  --surface:    #ffffff;
+  --surface-2:  #e8eaed;
+  --nav:        #ffffff;
+  --card:       #ffffff;
+  --card-hov:   #f5f7fa;
+  --border:     rgba(0,0,0,0.09);
+  --border-hov: rgba(0,0,0,0.18);
+  --text:       #0f1117;
+  --text-2:     #52596b;
+  --text-3:     rgba(82,89,107,0.55);
+  color-scheme: light;
+}
+body.rf-light .rf-topnav { background: rgba(255,255,255,0.96) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-mobile-drawer { background: rgba(248,249,252,0.99) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-meeting-card { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); }
+body.rf-light .rf-meeting-card:hover { background: rgba(0,0,0,0.06); }
+body.rf-light .rf-footer { background: #e8eaed !important; border-top-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-navlink { color: #52596b; }
+body.rf-light .rf-navlink:hover { color: #0f1117; background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.09); }
+body.rf-light .rf-navlink.rf-active { color: #00a66a; background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.25); }
+body.rf-light .rf-drawer-link { color: #52596b; }
+body.rf-light .rf-drawer-link:hover { color: #0f1117; background: rgba(0,0,0,0.04); }
+body.rf-light .rf-footer-link { color: #52596b; }
+body.rf-light .rf-footer-link:hover { color: #0f1117; }
+body.rf-light .rf-footer-brand { color: rgba(82,89,107,0.4); }
+body.rf-light .rf-topnav-divider { background: rgba(0,0,0,0.09); }
+
+/* Content tasks selects — light theme */
+body.rf-light select { color-scheme: light; background: #ffffff !important; color: #1a1d23 !important; border-color: rgba(0,0,0,0.14) !important; }
+body.rf-light .rf-nav-logo .rf-logo-main { color: #0f1117 !important; }
+body.rf-light .rf-nav-logo .rf-logo-sub  { color: rgba(82,89,107,0.55) !important; }
+body.rf-light .rf-dot { color: #00a66a !important; }
+
+/* Theme toggle button */
+.rf-theme-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 6px; flex-shrink: 0;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: #8a8e9c; cursor: pointer; transition: all 0.15s;
+  font-family: inherit; padding: 0;
+}
+.rf-theme-btn:hover { background: rgba(255,255,255,0.1); color: #f5f5f5; border-color: rgba(255,255,255,0.2); }
+body.rf-light .rf-theme-btn { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); color: #52596b; }
+body.rf-light .rf-theme-btn:hover { background: rgba(0,0,0,0.1); color: #0f1117; }
+.rf-theme-btn .rf-icon-sun  { display: none; }
+.rf-theme-btn .rf-icon-moon { display: block; }
+body.rf-light .rf-theme-btn .rf-icon-sun  { display: block; }
+body.rf-light .rf-theme-btn .rf-icon-moon { display: none; }
+
+
+
+
+
+/* ── Content Tasks filter selects — theme-aware ── */
+.tt-filter-sel {
+  padding: 5px 8px;
+  background: var(--surface-2, #1c1f24);
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  border-radius: 5px;
+  color: var(--text, #f0f0f0);
+  font-family: inherit;
+  font-size: .65rem;
+  outline: none;
+  cursor: pointer;
+  color-scheme: dark;
+}
+.tt-search-input {
+  padding: 5px 8px 5px 24px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 5px;
+  color: #f0f0f0;
+  font-family: inherit;
+  font-size: .65rem;
+  outline: none;
+}
+body.rf-light .tt-filter-sel {
+  background: #ffffff !important;
+  border-color: rgba(0,0,0,0.15) !important;
+  color: #1a1d23 !important;
+  color-scheme: light;
+}
+body.rf-light .tt-filter-sel option {
+  background: #ffffff;
+  color: #1a1d23;
+}
+body.rf-light .tt-search-input {
+  background: rgba(0,0,0,.05) !important;
+  border-color: rgba(0,0,0,.12) !important;
+  color: #1a1d23 !important;
+}
+
+
+/* Content Tasks — done row text color per theme */
+:root { --tt-done-color: rgba(240,240,240,0.4); }
+body.rf-light { --tt-done-color: rgb(0 0 0 / 40%); }
+/* ═══════════════════ WEEK PLANNER ═══════════════════ */
+.tp-wrap { height: 100%; display: flex; flex-direction: column; }
+
+.tp-top { display:flex; align-items:center; gap:0.5rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border); margin-bottom:0.75rem; flex-wrap:wrap; }
+.tp-title { font-size:0.72rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--text); }
+.tp-week-num { font-size:0.6rem; font-weight:600; color:var(--accent); background:var(--accent-dim); border:1px solid rgba(0,208,132,.25); padding:0.18rem 0.55rem; border-radius:3px; }
+.tp-week-range { font-size:0.58rem; color:var(--text-3); }
+.tp-status { font-size:0.58rem; margin-left:auto; }
+.tp-nav-grp { display:flex; gap:2px; margin-left:auto; }
+.tp-btn { background:var(--surface); border:1px solid var(--border); border-radius:4px; color:var(--text-2); font-size:0.62rem; font-weight:600; padding:0.22rem 0.5rem; cursor:pointer; font-family:inherit; transition:all .12s; }
+.tp-btn:hover { border-color:var(--border-hov); color:var(--text); }
+.tp-btn-today { color:var(--accent); background:var(--accent-dim); border-color:rgba(0,208,132,.25); }
+.tp-btn-am { color:var(--accent); background:var(--accent-dim); border-color:rgba(0,208,132,.25); font-size:0.6rem; }
+
+.tp-members-bar { display:flex; gap:0.3rem; flex-wrap:wrap; align-items:center; margin-bottom:0.7rem; }
+.tp-chip { display:inline-flex; align-items:center; padding:0.18rem 0.5rem; border-radius:20px; font-size:0.58rem; font-weight:600; cursor:pointer; border:1px solid; user-select:none; transition:opacity .15s; }
+.tp-chip.dim { opacity:0.28; filter:saturate(.15); }
+.tp-week-hours { font-size:0.56rem; color:var(--text-3); margin-left:auto; font-variant-numeric:tabular-nums; }
+
+/* Calendar */
+.tp-cal-outer { flex:1; overflow-y:auto; overflow-x:hidden; border:1px solid var(--border); border-radius:6px; position:relative; }
+.tp-cal { display:grid; }
+
+.tp-hdr-time { background:var(--surface-2); border-bottom:1px solid var(--border); border-right:1px solid var(--border); padding:.3rem .35rem; font-size:.5rem; font-weight:700; letter-spacing:.1em; color:var(--text-3); text-align:right; text-transform:uppercase; position:sticky; top:0; z-index:3; }
+.tp-hdr-day { background:var(--surface-2); border-bottom:1px solid var(--border); border-left:1px solid rgba(255,255,255,.05); padding:.3rem .25rem; font-size:.6rem; font-weight:700; text-align:center; text-transform:uppercase; color:var(--text-2); position:sticky; top:0; z-index:3; white-space:nowrap; }
+.tp-hdr-day.is-today { color:var(--accent); }
+.tp-hdr-day .tp-day-num { font-size:.78rem; font-weight:700; display:block; line-height:1; margin-top:1px; }
+
+.tp-time-cell { border-right:1px solid var(--border); border-bottom:1px solid rgba(255,255,255,.025); padding:0 .3rem; font-size:.5rem; color:var(--text-3); text-align:right; height:36px; display:flex; align-items:center; justify-content:flex-end; box-sizing:border-box; }
+.tp-time-cell.major { border-bottom:1px solid rgba(255,255,255,.06); color:var(--text-2); font-weight:600; }
+
+.tp-cell { border-left:1px solid rgba(255,255,255,.04); border-bottom:1px solid rgba(255,255,255,.025); height:36px; position:relative; cursor:pointer; transition:background .1s; box-sizing:border-box; }
+.tp-cell:hover { background:rgba(255,255,255,.03); }
+.tp-cell.major { border-bottom:1px solid rgba(255,255,255,.06); }
+.tp-cell.is-today { background:rgba(0,208,132,.02); }
+.tp-cell.is-today:hover { background:rgba(0,208,132,.05); }
+
+.tp-task { position:absolute; left:2px; right:2px; border-radius:3px; padding:2px 4px; font-size:.55rem; font-weight:600; cursor:pointer; overflow:hidden; z-index:1; transition:filter .1s; display:flex; flex-direction:column; }
+.tp-task:hover { filter:brightness(1.2); z-index:2; }
+.tp-task-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.25; }
+.tp-task-who { font-size:.48rem; opacity:.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.tc-green  { background:rgba(0,208,132,.15);  border-left:3px solid #00d084; color:#00d084; }
+.tc-blue   { background:rgba(91,141,238,.15); border-left:3px solid #5b8dee; color:#5b8dee; }
+.tc-orange { background:rgba(232,151,58,.15); border-left:3px solid #e8973a; color:#e8973a; }
+.tc-red    { background:rgba(232,66,74,.15);  border-left:3px solid #e8424a; color:#e8424a; }
+.tc-purple { background:rgba(155,126,232,.15);border-left:3px solid #9b7ee8; color:#9b7ee8; }
+.tc-gold   { background:rgba(201,169,110,.15);border-left:3px solid #c9a96e; color:#c9a96e; }
+
+.tp-now-line { position:absolute; left:0; right:0; height:2px; background:var(--accent); pointer-events:none; z-index:4; }
+.tp-now-line::before { content:''; position:absolute; left:0; top:-3px; width:7px; height:7px; border-radius:50%; background:var(--accent); }
+
+/* Modal */
+.tp-modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:20000; align-items:center; justify-content:center; }
+.tp-modal-bg.open { display:flex; }
+.tp-modal { background:var(--surface); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:1.35rem; width:320px; max-width:93vw; display:flex; flex-direction:column; gap:.65rem; box-shadow:0 24px 60px rgba(0,0,0,.75); }
+.tp-modal-hdr { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--text); padding-bottom:.5rem; border-bottom:1px solid var(--border); }
+.tp-modal label { font-size:.52rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); display:block; margin-bottom:.25rem; }
+.tp-modal input, .tp-modal select, .tp-modal textarea { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:inherit; font-size:.72rem; padding:.4rem .6rem; outline:none; transition:border-color .14s; box-sizing:border-box; }
+.tp-modal input:focus, .tp-modal select:focus, .tp-modal textarea:focus { border-color:var(--accent); }
+.tp-modal select option { background:var(--surface-2); }
+.tp-2col { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+.tp-actions { display:flex; gap:.4rem; justify-content:flex-end; padding-top:.3rem; border-top:1px solid var(--border); }
+.tp-mbtn { padding:.34rem .75rem; border-radius:4px; font-size:.63rem; font-weight:700; cursor:pointer; border:1px solid; font-family:inherit; transition:all .12s; }
+.tp-mbtn-cancel { background:var(--surface-2); border-color:var(--border); color:var(--text-2); }
+.tp-mbtn-save { background:var(--accent-dim); border-color:rgba(0,208,132,.3); color:var(--accent); }
+.tp-mbtn-del { background:rgba(232,66,74,.1); border-color:rgba(232,66,74,.3); color:#e8424a; margin-right:auto; }
+
+
+/* ── PANEL TOGGLE — sits at left edge of planner, vertically centred ── */
+.tempo-panel { position: relative; }
+.panel-toggle-btn {
+  position: absolute;
+  left: -16px; top: 50%;
+  transform: translateY(-50%);
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--surface-2);
+  border: 1.5px solid rgba(255,255,255,0.18);
+  color: var(--text); cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  z-index: 100; transition: all .2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,0.04);
+}
+.panel-toggle-btn:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 4px 16px rgba(0,208,132,.25);
+}
+/* Arrow points LEFT (collapse) by default; rotates RIGHT when hidden */
+.panel-toggle-btn svg { transition: transform .3s ease; flex-shrink: 0; }
+.layout.left-hidden .panel-toggle-btn svg { transform: rotate(180deg); }
+
+/* Expand / fullscreen button */
+.planner-expand-btn {
+  position: absolute; top: 12px; right: 12px; z-index: 10;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text-2); cursor: pointer;
+  width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.planner-expand-btn:hover { border-color: var(--border-hov); color: var(--text); }
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+
+// ═══════════════════════════════════
+// 3D GLOBE
+// ═══════════════════════════════════
+(function() {
+    const container = document.getElementById('globe-bg');
+    if (!container || typeof THREE === 'undefined') return;
+
+    const W = container.offsetWidth || 800;
+    const H = container.offsetHeight || 800;
+
+    const scene    = new THREE.Scene();
+    const camera   = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    camera.position.z = 2.2;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(W, H);
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+
+    // MENA region lat/lon bounding boxes [minLat, maxLat, minLon, maxLon]
+    const menaRegions = [
+        // Gulf / Arabian Peninsula
+        [12, 30, 35, 60],
+        // North Africa (Morocco to Egypt)
+        [18, 38, -6, 37],
+        // Levant / Iraq
+        [28, 38, 35, 50],
+        // Kazakhstan / Caucasus area
+        [35, 52, 46, 82],
+    ];
+
+    function inMena(lat, lon) {
+        for (const [minLat, maxLat, minLon, maxLon] of menaRegions) {
+            if (lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon) return true;
+        }
+        return false;
+    }
+
+    // World land approximation using dot pattern
+    // We'll use a canvas texture to detect land from a simple world map
+    // Build dots on a sphere
+    const DOT_COUNT = 8000;
+    const dotGeometry = new THREE.BufferGeometry();
+    const positions = [];
+    const colors = [];
+
+    // Simple land detection using known lat/lon ranges
+    function isLand(lat, lon) {
+        // Very rough continent outlines
+        const land = [
+            // North America
+            (lat>25&&lat<72&&lon>-140&&lon<-52),
+            // South America
+            (lat>-55&&lat<12&&lon>-82&&lon<-34),
+            // Europe
+            (lat>35&&lat<71&&lon>-10&&lon<40),
+            // Africa
+            (lat>-35&&lat<37&&lon>-18&&lon<52),
+            // Asia (minus far east islands)
+            (lat>0&&lat<75&&lon>26&&lon<145),
+            // Australia
+            (lat>-44&&lat<-10&&lon>113&&lon<154),
+            // Greenland
+            (lat>60&&lat<84&&lon>-55&&lon<-16),
+            // Japan/Indonesia rough
+            (lat>-10&&lat<46&&lon>95&&lon<145),
+        ];
+        return land.some(Boolean);
+    }
+
+    const φ = Math.PI * (3 - Math.sqrt(5)); // golden angle
+
+    for (let i = 0; i < DOT_COUNT; i++) {
+        const y = 1 - (i / (DOT_COUNT - 1)) * 2;
+        const radius = Math.sqrt(1 - y * y);
+        const theta = φ * i;
+
+        const x = Math.cos(theta) * radius;
+        const z = Math.sin(theta) * radius;
+
+        // Convert to lat/lon
+        const lat = Math.asin(y) * (180 / Math.PI);
+        const lon = Math.atan2(z, x) * (180 / Math.PI);
+
+        if (!isLand(lat, lon)) continue;
+
+        positions.push(x * 1.0, y * 1.0, z * 1.0);
+
+        if (inMena(lat, lon)) {
+            // Bright red/pink for MENA — matches Reffine map
+            colors.push(0.9, 0.08, 0.22);
+        } else {
+            // Dim white for rest of world
+            colors.push(0.22, 0.23, 0.27);
+        }
+    }
+
+    dotGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    dotGeometry.setAttribute('color',    new THREE.Float32BufferAttribute(colors, 3));
+
+    const dotMaterial = new THREE.PointsMaterial({
+        size: 0.018,
+        vertexColors: true,
+        transparent: true,
+        opacity: 1.0,
+        sizeAttenuation: true,
+    });
+
+    const dots = new THREE.Points(dotGeometry, dotMaterial);
+    scene.add(dots);
+
+    // Faint wireframe sphere underneath
+    const sphereGeo = new THREE.SphereGeometry(0.995, 36, 36);
+    const sphereMat = new THREE.MeshBasicMaterial({
+        color: 0x1a1c22,
+        wireframe: false,
+        transparent: true,
+        opacity: 0.6,
+    });
+    scene.add(new THREE.Mesh(sphereGeo, sphereMat));
+
+    // Animate
+    function animateGlobe() {
+        requestAnimationFrame(animateGlobe);
+        dots.rotation.y += 0.0018;
+        renderer.render(scene, camera);
+    }
+    animateGlobe();
+
+    // Resize
+    window.addEventListener('resize', () => {
+        const s = container.offsetWidth;
+        renderer.setSize(s, s);
+    });
+})();
+
+
+// MEETING COUNTDOWNS — timezone-safe (Date.UTC everywhere)
+function updateMeetingCountdowns() {
+    var nowMs = Date.now();
+
+    // Get Warsaw UTC offset in ms at this moment (DST-aware)
+    function warsawOffsetMs() {
+        var d = new Date(nowMs);
+        var s = d.toLocaleString('en-US', {
+            timeZone: 'Europe/Warsaw',
+            year:'numeric', month:'2-digit', day:'2-digit',
+            hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false
+        });
+        var m = s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/);
+        if (!m) return 3600000;
+        var h = parseInt(m[4]); if (h === 24) h = 0;
+        var wUtcMs = Date.UTC(+m[3], +m[1]-1, +m[2], h, +m[5], +m[6]);
+        return wUtcMs - nowMs; // positive = Warsaw ahead of UTC
+    }
+
+    var offMs = warsawOffsetMs();
+    // Current Warsaw wall-clock as UTC epoch
+    var wNowMs = nowMs + offMs;
+
+    function warsawDay(wMs)  { return new Date(wMs).getUTCDay(); }
+    function warsawDate2(wMs){ return new Date(wMs).getUTCDate(); }
+    function warsawMonth(wMs){ return new Date(wMs).getUTCMonth(); }
+    function warsawYear(wMs) { return new Date(wMs).getUTCFullYear(); }
+
+    // ms from now until next tH:tM Warsaw on weekday dow (null=any day)
+    function msUntil(tH, tM, dow) {
+        for (var i = 0; i <= 7; i++) {
+            // Build the candidate in UTC representing tH:tM Warsaw on day (wNow + i days)
+            var baseDay = new Date(wNowMs);
+            var candidateWarsawMs = Date.UTC(
+                baseDay.getUTCFullYear(),
+                baseDay.getUTCMonth(),
+                baseDay.getUTCDate() + i,
+                tH, tM, 0
+            );
+            // This candidate is in Warsaw wall-clock space — convert to real UTC
+            var candidateUTC = candidateWarsawMs - offMs;
+            if (dow !== null) {
+                var cDay = warsawDay(candidateWarsawMs);
+                if (cDay !== dow) continue;
+            }
+            if (candidateUTC > nowMs) return candidateUTC - nowMs;
+        }
+        return 86400000;
+    }
+
+    function msUntilDaily() {
+        for (var i = 0; i <= 7; i++) {
+            var baseDay = new Date(wNowMs);
+            var nextDayWarsawMs = Date.UTC(
+                baseDay.getUTCFullYear(), baseDay.getUTCMonth(), baseDay.getUTCDate() + i,
+                0, 0, 0
+            );
+            var isThu = warsawDay(nextDayWarsawMs) === 4;
+            var candidateWarsawMs = Date.UTC(
+                baseDay.getUTCFullYear(), baseDay.getUTCMonth(), baseDay.getUTCDate() + i,
+                7, isThu ? 30 : 45, 0
+            );
+            var candidateUTC = candidateWarsawMs - offMs;
+            if (candidateUTC > nowMs) return candidateUTC - nowMs;
+        }
+        return 86400000;
+    }
+
+    function fmt(ms) {
+        if (ms <= 0) return 'NOW';
+        var s   = Math.floor(ms / 1000);
+        var d   = Math.floor(s / 86400);
+        var h   = Math.floor((s % 86400) / 3600);
+        var min = Math.floor((s % 3600) / 60);
+        var sec = s % 60;
+        function p(n) { return String(n).padStart(2,'0'); }
+        if (d > 0) return d + 'd : ' + p(h) + 'h : ' + p(min) + 'm';
+        return p(h) + 'h : ' + p(min) + 'm : ' + p(sec) + 's';
+    }
+
+    function apply(ms, id, cls) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var text = fmt(ms);
+        el.textContent = text;
+        el.className = cls + (text === 'NOW' ? ' now' : ms < 30*60*1000 ? ' soon' : '');
+        var card = el.closest ? el.closest('.meeting-card, .mobile-meeting-card') : null;
+        if (card) card.classList.toggle('active-meeting', text === 'NOW');
+    }
+
+    var weekly = msUntil(13, 0, 1);   // Monday 13:00 Warsaw
+    var daily  = msUntilDaily();       // 07:45 daily, 07:30 Thu
+    var offers = msUntil(8, 0, 4);    // Thursday 08:00 Warsaw
+
+    apply(weekly, 'weeklyCountdown',       'meeting-card-countdown');
+    apply(weekly, 'mobileWeeklyCountdown', 'mobile-meeting-card-countdown');
+    apply(daily,  'dailyCountdown',        'meeting-card-countdown');
+    apply(daily,  'mobileDailyCountdown',  'mobile-meeting-card-countdown');
+    apply(offers, 'offersCountdown',       'meeting-card-countdown');
+    apply(offers, 'mobileOffersCountdown', 'mobile-meeting-card-countdown');
+}
+
+
+</script>
+</head>
+<body>
+
+<nav class="rf-topnav" id="rfTopNav">
+
+  <a href="index.html" class="rf-nav-logo">
+    <span class="rf-logo-main">REFFINE <span class="rf-dot">·</span> MENA HUB</span>
+    <span class="rf-logo-sub">Reffine JLR MENA Dashboard</span>
+  </a>
+  <div class="rf-topnav-divider"></div>
+
+  <div class="rf-nav-right">
+    <a href="index.html"              class="rf-navlink" data-rfpage="index">Dashboard</a>
+    <a href="translation.html"        class="rf-navlink" data-rfpage="translation">Translate</a>
+    <a href="translation-tool.html"   class="rf-navlink" data-rfpage="translation-tool">Translate Tool</a>
+    <a href="seo-tool.html"           class="rf-navlink" data-rfpage="seo-tool">SEO</a>
+    <a href="offer-generator.html"    class="rf-navlink" data-rfpage="offer-generator">Offers</a>
+    <a href="retailer-locator.html"  class="rf-navlink" data-rfpage="retailer-locator">Retailers</a>
+    <div class="rf-topnav-divider"></div>
+    <button class="rf-navlink" id="rfBtnResources">Docs</button>
+    <button class="rf-navlink" id="rfBtnEmails">Mails</button>
+  </div>
+
+  <div class="rf-right-section">
+    <div class="rf-nav-clock">
+      <canvas id="rfClockDubai" width="34" height="34"></canvas>
+      <div><span class="rf-clock-city">Dubai</span><span class="rf-clock-time" id="rfClockTimeDubai">--:--</span></div>
+    </div>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+    <div class="rf-nav-clock">
+      <canvas id="rfClockWarsaw" width="34" height="34"></canvas>
+      <div><span class="rf-clock-city">Warsaw</span><span class="rf-clock-time" id="rfClockTimeWarsaw">--:--</span></div>
+    </div>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+    <div class="rf-meeting-cards">
+      <a class="rf-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d" target="_blank">
+        <div class="rf-meeting-title">Weekly Call</div>
+        <div class="rf-meeting-countdown" id="rfWeeklyCountdown">--:--</div>
+        <div class="rf-meeting-sub">Mon 1:00 PM Warsaw</div>
+      </a>
+      <a class="rf-meeting-card" id="rfDailyCardLink" href="https://meet.google.com/pgy-nkum-gic" target="_blank">
+        <div class="rf-meeting-title">Daily Call</div>
+        <div class="rf-meeting-countdown" id="rfDailyCountdown">--:--</div>
+        <div class="rf-meeting-sub">07:45 · Thu 07:30 Warsaw</div>
+      </a>
+      <a class="rf-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d" target="_blank">
+        <div class="rf-meeting-title">Offers Call</div>
+        <div class="rf-meeting-countdown" id="rfOffersCountdown">--:--</div>
+        <div class="rf-meeting-sub">Thu 8:00 AM Warsaw</div>
+      </a>
+    </div>
+  </div>
+
+  <button class="rf-theme-btn" id="rfThemeBtn" style="margin-left:6px;" title="Toggle light/dark theme" aria-label="Toggle theme">
+    <svg class="rf-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="rf-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  <button class="rf-hamburger" id="rfHamburger" aria-label="Menu" style="margin-left:4px;">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<div class="rf-mobile-drawer" id="rfDrawer">
+  <a href="index.html" class="rf-drawer-link" data-rfpage="index">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+  <a href="translation.html" class="rf-drawer-link" data-rfpage="translation">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10"/></svg>Translate</a>
+  <a href="translation-tool.html" class="rf-drawer-link" data-rfpage="translation-tool">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6m-7 0 6-6 2-3M2 5h12M7 2h1m15 20-5-10-5 10M14 18h6"/></svg>Translate Tool</a>
+  <a href="seo-tool.html" class="rf-drawer-link" data-rfpage="seo-tool">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>SEO</a>
+  <a href="offer-generator.html" class="rf-drawer-link" data-rfpage="offer-generator">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Offers</a>
+  <a href="retailer-locator.html" class="rf-drawer-link" data-rfpage="retailer-locator">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Retailers</a>
+  <button class="rf-drawer-link" id="rfDrawerResources">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Docs</button>
+  <button class="rf-drawer-link" id="rfDrawerEmails">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>Mails</button>
+  <a href="login.html" class="rf-drawer-link" data-rfpage="admin" style="color:rgba(138,142,156,0.42);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Admin</a>
+</div>
+
+
+<script>
+// ═══ REFFINE SHARED NAV JS ═══
+(function(){
+  var isIndex = (location.pathname.split('/').pop()||'index.html') === 'index.html' ||
+                (location.pathname.split('/').pop()||'') === '';
+
+  // Mark active page
+  var page = (location.pathname.split('/').pop()||'index.html').replace('.html','') || 'index';
+  document.querySelectorAll('[data-rfpage]').forEach(function(el){
+    if(el.getAttribute('data-rfpage') === page) el.classList.add('rf-active');
+  });
+
+  // Resources + Emails buttons
+  function handleResourcesClick(){ if(isIndex){ showMode && showMode('important'); } else { location.href='index.html#resources'; } }
+  function handleEmailsClick()   { if(isIndex){ showMode && showMode('emails');    } else { location.href='index.html#emails';    } }
+
+  document.getElementById('rfBtnResources') && document.getElementById('rfBtnResources').addEventListener('click', handleResourcesClick);
+  document.getElementById('rfBtnEmails')    && document.getElementById('rfBtnEmails').addEventListener('click', handleEmailsClick);
+  document.getElementById('rfDrawerResources') && document.getElementById('rfDrawerResources').addEventListener('click', handleResourcesClick);
+  document.getElementById('rfDrawerEmails')    && document.getElementById('rfDrawerEmails').addEventListener('click', handleEmailsClick);
+
+  // Hamburger
+  var btn = document.getElementById('rfHamburger');
+  var drawer = document.getElementById('rfDrawer');
+  if(btn && drawer){
+    btn.addEventListener('click', function(){
+      var open = drawer.classList.toggle('open'); btn.classList.toggle('open', open);
+    });
+    document.addEventListener('click', function(e){
+      if(!btn.contains(e.target)&&!drawer.contains(e.target)){ drawer.classList.remove('open'); btn.classList.remove('open'); }
+    });
+  }
+
+  // Clocks
+  function getTimeIn(tz){
+    try { return new Date(new Date().toLocaleString('en-US',{timeZone:tz,hour12:false,year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'})); }
+    catch(e){ return new Date(); }
+  }
+  function drawClock(id,tz,textId){
+    var c=document.getElementById(id); if(!c)return;
+    var ctx=c.getContext('2d'),W=c.width,CX=W/2,CY=W/2,R=W/2-1;
+    ctx.clearRect(0,0,W,W);
+    var t=getTimeIn(tz),sec=t.getSeconds(),min=t.getMinutes(),hr=t.getHours()%12,ms=t.getMilliseconds();
+    ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fillStyle='#1c1f28';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
+    for(var i=0;i<12;i++){var a=(i/12)*Math.PI*2-Math.PI/2;ctx.beginPath();ctx.moveTo(CX+Math.cos(a)*(R-2),CY+Math.sin(a)*(R-2));ctx.lineTo(CX+Math.cos(a)*(R-5),CY+Math.sin(a)*(R-5));ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
+    ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(((hr+min/60)/12)*Math.PI*2-Math.PI/2)*(R*0.45),CY+Math.sin(((hr+min/60)/12)*Math.PI*2-Math.PI/2)*(R*0.45));ctx.strokeStyle='#eceef2';ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(((min+sec/60)/60)*Math.PI*2-Math.PI/2)*(R*0.62),CY+Math.sin(((min+sec/60)/60)*Math.PI*2-Math.PI/2)*(R*0.62));ctx.strokeStyle='rgba(236,238,242,0.75)';ctx.lineWidth=1.5;ctx.stroke();
+    var sA=((sec+ms/1000)/60)*Math.PI*2-Math.PI/2;
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(sA)*(R*0.7),CY+Math.sin(sA)*(R*0.7));ctx.strokeStyle='#00d084';ctx.lineWidth=1;ctx.shadowColor='#00d084';ctx.shadowBlur=3;ctx.stroke();ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(CX,CY,2,0,Math.PI*2);ctx.fillStyle='#eceef2';ctx.fill();
+    var el=document.getElementById(textId);
+    if(el) el.textContent=String(t.getHours()).padStart(2,'0')+':'+String(min).padStart(2,'0');
+  }
+  function tick(){ drawClock('rfClockDubai','Asia/Dubai','rfClockTimeDubai'); drawClock('rfClockWarsaw','Europe/Warsaw','rfClockTimeWarsaw'); requestAnimationFrame(tick); }
+  tick();
+
+  // Countdown (Date.UTC based — timezone-safe)
+  function runCountdowns(){
+    var nowMs=Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    function until(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cU=cW-off;
+        if(dow!==null&&new Date(cW).getUTCDay()!==dow) continue;
+        if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function untilDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dW).getUTCDay()===4;
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cU=cW-off; if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function fmt(ms){
+      if(ms<=0) return 'NOW';
+      var s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sc=s%60;
+      function p(n){return String(n).padStart(2,'0');}
+      return d>0 ? d+'d:'+p(h)+'h:'+p(m)+'m' : p(h)+'h:'+p(m)+'m:'+p(sc)+'s';
+    }
+    function set(id,ms){
+      var el=document.getElementById(id); if(!el) return;
+      var t=fmt(ms); el.textContent=t;
+      el.className='rf-meeting-countdown'+(t==='NOW'?' now':ms<30*60*1000?' soon':'');
+    }
+    set('rfWeeklyCountdown', until(13,0,1));
+    set('rfDailyCountdown',  untilDaily());
+    set('rfOffersCountdown', until(8,0,4));
+  }
+  runCountdowns();
+  setInterval(runCountdowns,1000);
+
+})();
+/* ─── MEETING NOTIFICATIONS ─── */
+(function(){
+  var DAILY_NORMAL = 'https://meet.google.com/pgy-nkum-gic';
+  var DAILY_THU    = 'https://meet.google.com/hxe-gzax-sre';
+
+  /* Update daily card href based on whether next daily is Thu or not */
+  function updateDailyLink(){
+    var nowMs = Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    var isThu=false;
+    for(var i=0;i<=7;i++){
+      var b=new Date(wNowMs);
+      var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+      var cThu=new Date(dW).getUTCDay()===4;
+      var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,cThu?30:45,0);
+      var cU=cW-off;
+      if(cU>nowMs){ isThu=cThu; break; }
+    }
+    var link=isThu?DAILY_THU:DAILY_NORMAL;
+    var cards=document.querySelectorAll('#rfDailyCardLink, #rfDailyMobileCard');
+    cards.forEach(function(el){ el.href=link; });
+  }
+  updateDailyLink();
+  setInterval(updateDailyLink, 60000);
+
+  /* ── Browser Notifications: 1-minute warning before each call ── */
+  var _notified = {};
+
+  var CALLS = [
+    { id:'weekly', name:'Weekly Call',  link:'https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d' },
+    { id:'daily',  name:'Daily Call',   link:null },  // link resolved dynamically
+    { id:'offers', name:'Offers Call',  link:'https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d' },
+  ];
+
+  function requestPermission(){
+    if(!('Notification' in window)) return;
+    if(Notification.permission==='default'){
+      Notification.requestPermission();
+    }
+  }
+  /* Ask for permission on first user interaction */
+  document.addEventListener('click', requestPermission, {once:true});
+
+  function getMsUntilCall(callId){
+    var nowMs=Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    function until(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cU=cW-off;
+        if(dow!==null&&new Date(cW).getUTCDay()!==dow) continue;
+        if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function untilDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dW).getUTCDay()===4;
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cU=cW-off; if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    if(callId==='weekly') return until(13,0,1);
+    if(callId==='daily')  return untilDaily();
+    if(callId==='offers') return until(8,0,4);
+    return 86400000;
+  }
+
+  function getDailyLink(){
+    var el=document.getElementById('rfDailyCardLink');
+    return el ? el.href : DAILY_NORMAL;
+  }
+
+  function fireNotification(call){
+    if(!('Notification' in window)||Notification.permission!=='granted') return;
+    var link=call.id==='daily'?getDailyLink():call.link;
+    var n=new Notification('📞 '+call.name+' starts in 1 minute', {
+      body: 'Click to join the call now',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%2300d084"/><text x="16" y="21" text-anchor="middle" font-size="16">📞</text></svg>',
+      requireInteraction: false,
+      tag: call.id
+    });
+    n.onclick=function(){ window.open(link,'_blank'); n.close(); };
+    setTimeout(function(){ n.close(); }, 15000);
+  }
+
+  function checkNotifications(){
+    var nowMs=Date.now();
+    /* Build a key based on current date+hour so notification fires once per occurrence */
+    var dayKey = new Date(nowMs).toISOString().slice(0,13);
+    CALLS.forEach(function(call){
+      var ms=getMsUntilCall(call.id);
+      var key=call.id+':'+dayKey;
+      /* Fire when 55–65 seconds remain (window to catch the 1-min mark) */
+      if(ms>55000&&ms<=65000&&!_notified[key]){
+        _notified[key]=true;
+        fireNotification(call);
+      }
+      /* Clean up old keys to avoid memory leak */
+      if(ms>120000) delete _notified[call.id+':'+new Date(nowMs-3600000).toISOString().slice(0,13)];
+    });
+  }
+
+  setInterval(checkNotifications, 5000);
+})();
+
+/* ─── THEME TOGGLE ─── */
+(function(){
+  var STORE = 'rf_theme';
+  function applyTheme(t){ document.body.classList.toggle('rf-light', t==='light'); try{ localStorage.setItem(STORE, t); }catch(e){} }
+  try{ var saved = localStorage.getItem(STORE) || 'dark'; } catch(e){ var saved = 'dark'; }
+  applyTheme(saved);
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('rfThemeBtn');
+    if(btn){ btn.addEventListener('click', function(){
+      applyTheme(document.body.classList.contains('rf-light') ? 'dark' : 'light');
+    }); }
+  });
+})();
+
+</script>
+
+
+
+
+<div id="globe-bg"></div>
+
+
+<div class="mobile-filterbar" id="mobileFilterBar" style="flex-direction:column;align-items:stretch;gap:0;padding:0;">
+    <div class="filterbar-row">
+        <div style="position:relative;flex-shrink:0;"><svg style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="searchInput" type="text" placeholder="Search…" autocomplete="off" style="padding:0.3rem 0.75rem 0.3rem 1.8rem;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:20px;color:var(--text);font-family:Mulish,sans-serif;font-size:0.72rem;width:120px;outline:none;"></div>
+        <span class="mobile-filter-divider"></span>
+        <button class="mobile-brand-btn active-lrdx" data-mbrand="lrdx">Land Rover</button>
+        <button class="mobile-brand-btn" data-mbrand="rr">Range Rover</button>
+        <button class="mobile-brand-btn" data-mbrand="jdx">Jaguar</button>
+        <span class="mobile-filter-divider"></span>
+        <div class="nav-modes" id="navModes" style="border:none;background:none;padding:0;gap:3px;">
+            <input type="radio" id="mode-live" name="mode" value="live" checked>
+            <label for="mode-live" style="font-size:0.7rem;padding:0.3rem 0.75rem;">Live</label>
+            <input type="radio" id="mode-cms" name="mode" value="cms">
+            <label for="mode-cms" style="font-size:0.7rem;padding:0.3rem 0.75rem;">CMS</label>
+        </div>
+
+    </div>
+    <div class="filterbar-row filterbar-row-2">
+        <button class="mobile-region-btn active" data-mregion="all">All</button>
+        <button class="mobile-region-btn" data-mregion="GCC">GCC</button>
+        <button class="mobile-region-btn" data-mregion="XM">XM</button>
+        <button class="mobile-region-btn" data-mregion="LANGS">LANGS</button>
+    </div>
+</div>
+
+<input type="radio" id="mode-important" name="mode" value="important" style="display:none">
+<input type="radio" id="mode-emails" name="mode" value="emails" style="display:none">
+
+<div class="layout" id="mainLayout">
+
+    <main class="main" id="mainContent">
+      <div id="lrdx"  class="brand-panel active-panel"></div>
+      <div id="rr"    class="brand-panel" style="display:none"></div>
+      <div id="jdx"   class="brand-panel" style="display:none"></div>
+      <div id="important-sites" style="display:none"></div>
+      <div id="emails-section" style="display:none"></div>
+    </main>
+
+    <div class="tempo-panel" id="tempoPanel">
+      <button class="panel-toggle-btn" id="panelToggleBtn" onclick="toggleLeftPanel()" title="Hide/show site links">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+
+      <div class="tempo-inner" id="tempoInner">
+        <div id="taskTracker" style="height:100%;display:flex;flex-direction:column;min-height:0;"></div>
+      </div>
+    </div>
+
+    <div class="mobile-meeting-strip">
+        <a class="mobile-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d" target="_blank" id="mobileWeeklyCard">
+            <div class="mobile-meeting-card-title">Weekly</div>
+            <div class="mobile-meeting-card-countdown" id="mobileWeeklyCountdown">--:--</div>
+            <div class="mobile-meeting-card-sub">Mon 1:00 PM Warsaw</div>
+        </a>
+        <a class="mobile-meeting-card" id="rfDailyMobileCard" href="https://meet.google.com/pgy-nkum-gic" target="_blank">
+            <div class="mobile-meeting-card-title">Daily</div>
+            <div class="mobile-meeting-card-countdown" id="mobileDailyCountdown">--:--</div>
+            <div class="mobile-meeting-card-sub">07:45 · Thu 07:30 Warsaw</div>
+        </a>
+        <a class="mobile-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d" target="_blank" id="mobileOffersCard">
+            <div class="mobile-meeting-card-title">Offers</div>
+            <div class="mobile-meeting-card-countdown" id="mobileOffersCountdown">--:--</div>
+            <div class="mobile-meeting-card-sub">Thu 8:00 AM Warsaw</div>
+        </a>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════
+const brandAccents = { lrdx:'#22c55e', rr:'#d4a85a', jdx:'#ef4444', other:'#6366f1' };
+let activeBrand = 'lrdx';
+
+function getTimeIn(tz) {
+    try {
+        return new Date(new Date().toLocaleString('en-US', { timeZone: tz, hour12: false,
+            year:'numeric', month:'numeric', day:'numeric', hour:'numeric', minute:'numeric', second:'numeric' }));
+    } catch(e) { return new Date(); }
+}
+
+function drawSmallClock(canvasId, tz, textId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height, CX = W/2, CY = H/2, R = W/2 - 1;
+    ctx.clearRect(0, 0, W, H);
+    const now = getTimeIn(tz);
+    const sec = now.getSeconds(), min = now.getMinutes(), hr = now.getHours() % 12;
+    const ms = now.getMilliseconds();
+    const acc = brandAccents[activeBrand] || '#6366f1';
+
+    // Face
+    ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI*2);
+    ctx.fillStyle = '#1c1f28'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; ctx.stroke();
+
+    // Ticks
+    for (let i = 0; i < 12; i++) {
+        const a = (i/12)*Math.PI*2 - Math.PI/2;
+        ctx.beginPath();
+        ctx.moveTo(CX + Math.cos(a)*(R-2.5), CY + Math.sin(a)*(R-2.5));
+        ctx.lineTo(CX + Math.cos(a)*(R-5), CY + Math.sin(a)*(R-5));
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+    }
+
+    ctx.lineCap = 'round';
+    // Hour
+    const hA = ((hr + min/60)/12)*Math.PI*2 - Math.PI/2;
+    ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(CX + Math.cos(hA)*(R*0.45), CY + Math.sin(hA)*(R*0.45));
+    ctx.strokeStyle = '#eceef2'; ctx.lineWidth = 2; ctx.stroke();
+    // Minute
+    const mA = ((min + sec/60)/60)*Math.PI*2 - Math.PI/2;
+    ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(CX + Math.cos(mA)*(R*0.65), CY + Math.sin(mA)*(R*0.65));
+    ctx.strokeStyle = 'rgba(236,238,242,0.75)'; ctx.lineWidth = 1.5; ctx.stroke();
+    // Second
+    const sA = ((sec + ms/1000)/60)*Math.PI*2 - Math.PI/2;
+    ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(CX + Math.cos(sA)*(R*0.72), CY + Math.sin(sA)*(R*0.72));
+    ctx.strokeStyle = acc; ctx.lineWidth = 1; ctx.shadowColor = acc; ctx.shadowBlur = 4; ctx.stroke(); ctx.shadowBlur = 0;
+    // Center
+    ctx.beginPath(); ctx.arc(CX, CY, 2, 0, Math.PI*2); ctx.fillStyle = '#eceef2'; ctx.fill();
+
+    const hh = String(now.getHours()).padStart(2,'0'), mm = String(min).padStart(2,'0');
+    const el = document.getElementById(textId);
+    if (el) el.textContent = hh + ':' + mm;
+}
+
+function tick() {
+    drawSmallClock('clockDubai', 'Asia/Dubai', 'clockTimeDubai');
+    drawSmallClock('clockWarsaw', 'Europe/Warsaw', 'clockTimeWarsaw');
+    requestAnimationFrame(tick);
+}
+tick();
+
+function drawBigClock(canvasId, tz, textId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, CX = W/2, CY = W/2, R = W/2 - 4;
+    ctx.clearRect(0, 0, W, W);
+    const now = getTimeIn(tz);
+    const sec = now.getSeconds(), min = now.getMinutes(), hr = now.getHours() % 12, ms = now.getMilliseconds();
+    const acc = brandAccents[activeBrand] || '#6366f1';
+
+    // Background
+    const bg = ctx.createRadialGradient(CX-20, CY-20, 5, CX, CY, R);
+    bg.addColorStop(0, 'rgba(40,42,55,0.95)'); bg.addColorStop(1, 'rgba(13,15,20,0.98)');
+    ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI*2); ctx.fillStyle = bg; ctx.fill();
+    ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke();
+
+    // Seconds arc
+    const secAngle = ((sec + ms/1000)/60)*Math.PI*2 - Math.PI/2;
+    ctx.beginPath(); ctx.arc(CX, CY, R-3, -Math.PI/2, secAngle);
+    ctx.strokeStyle = acc; ctx.lineWidth = 2; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
+
+    // Inner ring
+    ctx.beginPath(); ctx.arc(CX, CY, R-8, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth = 1; ctx.stroke();
+
+    // Ticks
+    for (let i = 0; i < 60; i++) {
+        const a = (i/60)*Math.PI*2 - Math.PI/2, maj = i%5===0, o = R-10, n = maj?o-9:o-5;
+        ctx.beginPath(); ctx.moveTo(CX+Math.cos(a)*o, CY+Math.sin(a)*o); ctx.lineTo(CX+Math.cos(a)*n, CY+Math.sin(a)*n);
+        ctx.strokeStyle = maj?'rgba(236,238,242,0.3)':'rgba(236,238,242,0.1)'; ctx.lineWidth = maj?2:1; ctx.stroke();
+    }
+
+    ctx.lineCap = 'round';
+    // Hour
+    const hA = ((hr+min/60)/12)*Math.PI*2-Math.PI/2;
+    ctx.beginPath(); ctx.moveTo(CX+Math.cos(hA+Math.PI)*10, CY+Math.sin(hA+Math.PI)*10); ctx.lineTo(CX+Math.cos(hA)*(R*0.48), CY+Math.sin(hA)*(R*0.48));
+    ctx.strokeStyle='#eceef2'; ctx.lineWidth=3; ctx.stroke();
+    // Minute
+    const mA = ((min+sec/60)/60)*Math.PI*2-Math.PI/2;
+    ctx.beginPath(); ctx.moveTo(CX+Math.cos(mA+Math.PI)*12, CY+Math.sin(mA+Math.PI)*12); ctx.lineTo(CX+Math.cos(mA)*(R*0.65), CY+Math.sin(mA)*(R*0.65));
+    ctx.strokeStyle='rgba(236,238,242,0.85)'; ctx.lineWidth=2; ctx.stroke();
+    // Second
+    const sA = ((sec+ms/1000)/60)*Math.PI*2-Math.PI/2;
+    ctx.beginPath(); ctx.moveTo(CX+Math.cos(sA+Math.PI)*16, CY+Math.sin(sA+Math.PI)*16); ctx.lineTo(CX+Math.cos(sA)*(R*0.72), CY+Math.sin(sA)*(R*0.72));
+    ctx.strokeStyle=acc; ctx.lineWidth=1.5; ctx.shadowColor=acc; ctx.shadowBlur=6; ctx.stroke(); ctx.shadowBlur=0;
+    // Center
+    ctx.beginPath(); ctx.arc(CX, CY, 4, 0, Math.PI*2); ctx.fillStyle='#eceef2'; ctx.fill();
+    ctx.beginPath(); ctx.arc(CX, CY, 2, 0, Math.PI*2); ctx.fillStyle=acc; ctx.fill();
+
+    const hh=String(now.getHours()).padStart(2,'0'), mm=String(min).padStart(2,'0'), ss=String(sec).padStart(2,'0');
+    const el=document.getElementById(textId); if(el) el.textContent=hh+' : '+mm+' : '+ss;
+}
+
+function tickBig() {
+    drawBigClock('clockDubaiBig', 'Asia/Dubai', 'clockTimeDubaiBig');
+    drawBigClock('clockWarsawBig', 'Europe/Warsaw', 'clockTimeWarsawBig');
+    requestAnimationFrame(tickBig);
+}
+tickBig();
+
+// ═══════════════════════════════════
+// DATA
+// ═══════════════════════════════════
+const regionGroups = [
+    { title:"GCC",   countries:["UAE","Saudi Arabia","Qatar","Oman","Bahrain","Kuwait"] },
+    { title:"XM",    countries:["Jordan","Egypt","Palestine","Iraq","Morocco","Lebanon","Tunisia","Algeria"] },
+    { title:"LANGS", countries:["Azerbaijan","Georgia","Kazakhstan","Armenia"] }
+];
+
+const importantSitesData = [
+    { name:"MENA Folder Drive",            url:"https://drive.google.com/drive/u/1/folders/1n3INQqjnYjaqSpEzXHRHdWgbWv9yoPtw" },
+    { name:"Offers Login",                 url:"https://offers.mena.jlr.reffine.com/admin/login" },
+    { name:"CDN Image Library",            url:"https://media.raffine.eu/admin/login" },
+    { name:"Offer Status Sheet",           url:"https://docs.google.com/spreadsheets/d/1TVBv1CpH5_uHAKyQPbz_yH4GAwlyR2JdJjdEgmTmZJo/edit#gid=275235307" },
+    { name:"URL Structure for Offers MENA",url:"https://docs.google.com/document/d/1lh_Wh5x2smZshH39TpFtWBGTXBKOZ617sNWjBTh1Fmo/edit?tab=t.0" },
+    { name:"MENA Content Team Tasks",      url:"https://docs.google.com/spreadsheets/d/1ZHvECROiUXjvBVZ_A-Xs0PTQTWTb3QJZPRvjUHTnRfE/edit?gid=401688263#gid=401688263" },
+    { name:"RWS Nameplate Updates",        url:"https://sftpscan.rws.com/#/jlr-marketing-scanned/Accenture/DX/Nameplates/" },
+    { name:"RWS Non-Nameplate Updates",    url:"https://sftpscan.rws.com/#/jlr-marketing-scanned/Accenture/DX/Non-Nameplates/" },
+    { name:"MENA Translations Database",       url:"https://drive.google.com/drive/u/1/folders/1Zvkx6u9hQWu-Weu5jYSOFbWEqbaQ1M_v" }
+];
+
+const rrCmsPrefixes = {
+    "UAE":"uae","Saudi Arabia":"ksa","Qatar":"qatar","Oman":"oman","Bahrain":"bahrain","Kuwait":"kuwait",
+    "Jordan":"jordan","Egypt":"egypt","Palestine":"palestine","Iraq":"iraq","Morocco":"morocco",
+    "Lebanon":"lebanon","Tunisia":"tunisia","Algeria":"algeria","Azerbaijan":"azerbaijan",
+    "Georgia":"georgia","Kazakhstan":"kazakhstan","Armenia":"armenia"
+};
+
+const siteData = {
+    "LRDX": {
+        "UAE":{"EN":"https://www.landrover-uae.com/en/","AR":"https://www.landrover-uae.com/ar/"},
+        "Saudi Arabia":{"EN":"https://www.landrover-saudi.com/en/","AR":"https://www.landrover-saudi.com/ar/"},
+        "Qatar":{"EN":"https://www.landrover-qatar.com/en/","AR":"https://www.landrover-qatar.com/ar/"},
+        "Oman":{"EN":"https://www.landrover-oman.com/en/","AR":"https://www.landrover-oman.com/ar/"},
+        "Bahrain":{"EN":"https://www.landroverbahrain.com/en/","AR":"https://www.landroverbahrain.com/ar/"},
+        "Kuwait":{"EN":"https://www.landroverkuwait.com/en/","AR":"https://www.landroverkuwait.com/ar/"},
+        "Jordan":{"EN":"https://www.landrover-jordan.com/en/","AR":"https://www.landrover-jordan.com/ar/"},
+        "Egypt":{"EN":"https://www.landrover-egypt.com/en/","AR":"https://www.landrover-egypt.com/ar/"},
+        "Palestine":{"EN":"https://www.landrover-palestine.com/en/","AR":"https://www.landrover-palestine.com/ar/"},
+        "Iraq":{"EN":"https://www.landrover-iraq.com/en/","AR":"https://www.landrover-iraq.com/ar/","KU":"https://www.landrover-iraq.com/ku/"},
+        "Morocco":{"EN":"https://www.landrover-maroc.com/en/","AR":"https://www.landrover-maroc.com/ar/","FR":"https://www.landrover-maroc.com/fr/"},
+        "Lebanon":{"EN":"https://www.landrover-lebanon.com/en/","AR":"https://www.landrover-lebanon.com/ar/","FR":"https://www.landrover-lebanon.com/fr/"},
+        "Tunisia":{"EN":"https://www.landrover-tunisie.com/en/","AR":"https://www.landrover-tunisie.com/ar/","FR":"https://www.landrover-tunisie.com/fr/"},
+        "Algeria":{"EN":"https://www.landrover-algerie.com/en/","AR":"https://www.landrover-algerie.com/ar/","FR":"https://www.landrover-algerie.com/fr/"},
+        "Azerbaijan":{"EN":"https://www.landrover-azerbaijan.com/en/","AZ":"https://www.landrover-azerbaijan.com/az/"},
+        "Georgia":{"EN":"https://www.landrover-georgia.com/en/","GE":"https://www.landrover-georgia.com/ge/"},
+        "Kazakhstan":{"EN":"https://www.landrover-kazakhstan.com/en/","KZ":"https://www.landrover-kazakhstan.com/kz/","RU":"https://www.landrover-kazakhstan.com/ru/"},
+        "Armenia":{"EN":"https://www.landrover-armenia.com/en/","AM":"https://www.landrover-armenia.com/am/","RU":"https://www.landrover-armenia.com/ru/"}
+    },
+    "RR": {
+        "UAE":{"EN":"https://www.rangerover.com/en-ae/","AR":"https://www.rangerover.com/ar-ae/"},
+        "Saudi Arabia":{"EN":"https://www.rangerover.com/en-sa/","AR":"https://www.rangerover.com/ar-sa/"},
+        "Qatar":{"EN":"https://www.rangerover.com/en-qa/","AR":"https://www.rangerover.com/ar-qa/"},
+        "Oman":{"EN":"https://www.rangerover.com/en-om/","AR":"https://www.rangerover.com/ar-om/"},
+        "Bahrain":{"EN":"https://www.rangerover.com/en-bh/","AR":"https://www.rangerover.com/ar-bh/"},
+        "Kuwait":{"EN":"https://www.rangerover.com/en-kw/","AR":"https://www.rangerover.com/ar-kw/"},
+        "Jordan":{"EN":"https://www.rangerover.com/en-jo/","AR":"https://www.rangerover.com/ar-jo/"},
+        "Egypt":{"EN":"https://www.rangerover.com/en-eg/","AR":"https://www.rangerover.com/ar-eg/"},
+        "Palestine":{"EN":"https://www.rangerover.com/en-ps/","AR":"https://www.rangerover.com/ar-ps/"},
+        "Iraq":{"EN":"https://www.rangerover.com/en-iq/","AR":"https://www.rangerover.com/ar-iq/","KU":"https://www.rangerover.com/ku-iq/"},
+        "Morocco":{"EN":"https://www.rangerover.com/en-ma/","AR":"https://www.rangerover.com/ar-ma/","FR":"https://www.rangerover.com/fr-ma/"},
+        "Lebanon":{"EN":"https://www.rangerover.com/en-lb/","AR":"https://www.rangerover.com/ar-lb/","FR":"https://www.rangerover.com/fr-lb/"},
+        "Tunisia":{"EN":"https://www.rangerover.com/en-tn/","AR":"https://www.rangerover.com/ar-tn/","FR":"https://www.rangerover.com/fr-tn/"},
+        "Algeria":{"EN":"https://www.rangerover.com/en-dz/","AR":"https://www.rangerover.com/ar-dz/","FR":"https://www.rangerover.com/fr-dz/"},
+        "Azerbaijan":{"EN":"https://www.rangerover.com/en-az/","AZ":"https://www.rangerover.com/az-az/"},
+        "Georgia":{"EN":"https://www.rangerover.com/en-ge/","GE":"https://www.rangerover.com/ge-ge/"},
+        "Kazakhstan":{"EN":"https://www.rangerover.com/en-kz/","KZ":"https://www.rangerover.com/kz-kz/","RU":"https://www.rangerover.com/ru-kz/"},
+        "Armenia":{"EN":"https://www.rangerover.com/en-am/","AM":"https://www.rangerover.com/am-am/","RU":"https://www.rangerover.com/ru-am/"}
+    },
+    "JDX": {
+        "UAE":{"EN":"https://www.jaguar-uae.com/en/","AR":"https://www.jaguar-uae.com/ar/"},
+        "Saudi Arabia":{"EN":"https://www.jaguar-saudi.com/en/","AR":"https://www.jaguar-saudi.com/ar/"},
+        "Qatar":{"EN":"https://www.jaguar-qatar.com/en/","AR":"https://www.jaguar-qatar.com/ar/"},
+        "Oman":{"EN":"https://www.jaguar-oman.com/en/","AR":"https://www.jaguar-oman.com/ar/"},
+        "Bahrain":{"EN":"https://www.jaguar-bahrain.com/en/","AR":"https://www.jaguar-bahrain.com/ar/"},
+        "Kuwait":{"EN":"https://www.jaguar-kuwait.com/en/","AR":"https://www.jaguar-kuwait.com/ar/"},
+        "Jordan":{"EN":"https://www.jaguar-jordan.com/en/","AR":"https://www.jaguar-jordan.com/ar/"},
+        "Egypt":{"EN":"https://www.jaguar-egypt.com/en/","AR":"https://www.jaguar-egypt.com/ar/"},
+        "Palestine":{"EN":"https://www.jaguar-palestine.com/en/","AR":"https://www.jaguar-palestine.com/ar/"},
+        "Iraq":{"EN":"https://www.jaguar-iraq.com/en/","AR":"https://www.jaguar-iraq.com/ar/","KU":"https://www.jaguar-iraq.com/ku/"},
+        "Morocco":{"EN":"https://www.jaguar-maroc.com/en/","AR":"https://www.jaguar-maroc.com/ar/","FR":"https://www.jaguar-maroc.com/fr/"},
+        "Lebanon":{"EN":"https://www.jaguar-lebanon.com/en/","AR":"https://www.jaguar-lebanon.com/ar/","FR":"https://www.jaguar-lebanon.com/fr/"},
+        "Tunisia":{"EN":"https://www.jaguar-tunisie.com/en/","AR":"https://www.jaguar-tunisie.com/ar/","FR":"https://www.jaguar-tunisie.com/fr/"},
+        "Algeria":{"EN":"https://www.jaguar-algerie.com/en/","AR":"https://www.jaguar-algerie.com/ar/","FR":"https://www.jaguar-algerie.com/fr/"},
+        "Azerbaijan":{"EN":"https://www.jaguar-azerbaijan.com/en/","AZ":"https://www.jaguar-azerbaijan.com/az/"},
+        "Georgia":{"EN":"https://www.jaguar-georgia.com/en/","GE":"https://www.jaguar-georgia.com/ge/"},
+        "Kazakhstan":{"EN":"https://www.jaguar-kazakhstan.com/en/","KZ":"https://www.jaguar-kazakhstan.com/kz/","RU":"https://www.jaguar-kazakhstan.com/ru/"},
+        "Armenia":{"EN":"https://www.jaguar-armenia.com/en/","AM":"https://www.jaguar-armenia.com/am/","RU":"https://www.jaguar-armenia.com/ru/"}
+    }
+};
+
+const CC_REFFINE = [
+    { name:"Mouad Jaafari",           email:"mjaafari@jaguarlandrover.com" },
+    { name:"Ali Al-Kazaz",            email:"ali.alkazaz@reffine.com" },
+    { name:"Piotr Kara\u015B",        email:"piotr.karas@reffine.com" },
+    { name:"Patryk Szafia\u0144ski",  email:"patryk.szafianski@reffine.com" },
+    { name:"Bartosz Trzmielewski",    email:"bartosz.trzmielewski@reffine.com" },
+    { name:"Maciej Stachura",         email:"maciej.stachura@reffine.com" },
+    { name:"Kacper Grudzi\u0144ski",  email:"kacper.grudzinski@reffine.com" },
+    { name:"Marcin Bekasiewicz",      email:"marcin.bekasiewicz@reffine.com" }
+];
+
+const emailGroups = [
+    { id:"az",   title:"Email Title \u2014 AZ",    greeting:"Hi Team,",    to:[{name:'"Elnur A. Guliyev"',email:"e.guliyev@autolux-az.com"},{name:'"Mujgan M. Aliyeva"',email:"m.aliyeva@autolux-az.com"},{name:'"Samira F. Gadirova"',email:"s.gadirova@autolux-az.com"}], cc:CC_REFFINE },
+    { id:"ge",   title:"Email Title \u2014 GE",    greeting:"Hi Team,",    to:[{name:"Ella Kamladze",email:"E.Kamladze@gtmotors.ge"},{name:"Mata Ustiashvili",email:"m.ustiashvili@gtmotors.ge"}], cc:CC_REFFINE },
+    { id:"ku",   title:"Email Title \u2014 KU",    greeting:"Hi Rabin,",   to:[{name:"Rabin Majid Salih",email:"rabin.majid@sta.iq"}], cc:CC_REFFINE },
+    { id:"kzru", title:"Email Title \u2014 KZ/RU", greeting:"Hi Aruzhan,", to:[{name:"Aruzhan Nurgabylova",email:"a.nurgabylova@britishmotors.kz"}], cc:CC_REFFINE },
+    { id:"am",   title:"Email Title \u2014 AM",    greeting:"Hi Mane,",    to:[{name:"Mane Sargsyan",email:"mane.sargsyan@autogroup.am"}], cc:CC_REFFINE }
+];
+
+// ═══════════════════════════════════
+// RENDER BRAND PANELS
+// ═══════════════════════════════════
+const brandLabels = { LRDX:'Land Rover', RR:'Range Rover', JDX:'Jaguar' };
+
+
+// ── COUNTRY FLAGS ──
+// ISO 3166-1 alpha-2 codes → flag image via flagcdn.com
+const COUNTRY_FLAGS = {
+    'UAE':           'ae',
+    'Saudi Arabia':  'sa',
+    'Qatar':         'qa',
+    'Oman':          'om',
+    'Bahrain':       'bh',
+    'Kuwait':        'kw',
+    'Jordan':        'jo',
+    'Egypt':         'eg',
+    'Palestine':     'ps',
+    'Iraq':          'iq',
+    'Morocco':       'ma',
+    'Lebanon':       'lb',
+    'Tunisia':       'tn',
+    'Algeria':       'dz',
+    'Azerbaijan':    'az',
+    'Georgia':       'ge',
+    'Kazakhstan':    'kz',
+    'Armenia':       'am',
+};
+function countryFlagImg(code) {
+    if (!code) return '';
+    return '<img src="https://flagcdn.com/20x15/' + code + '.png" '
+         + 'srcset="https://flagcdn.com/40x30/' + code + '.png 2x" '
+         + 'width="20" height="15" alt="" class="card-flag" loading="lazy">';
+}
+
+function renderBrandCards(brandKey, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    regionGroups.forEach(group => {
+        let cards = '';
+        group.countries.forEach(country => {
+            const links = siteData[brandKey][country];
+            if (!links) return;
+            let badges = '';
+            for (const [lang, url] of Object.entries(links)) {
+                let cmsUrl = url + 'cms/';
+                if (brandKey === 'RR') {
+                    const p = url.split('/').filter(Boolean).pop();
+                    cmsUrl = 'https://app.' + rrCmsPrefixes[country] + '-rangerover.lrdx.prod.reffine.com/' + p + '/cms/';
+                }
+                badges += '<a href="' + url + '" data-live-url="' + url + '" data-cms-url="' + cmsUrl + '" target="_blank" class="link-badge brand-link">'
+                    + '<svg class="lock-icon" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6z"/></svg>'
+                    + lang + '</a>';
+            }
+            const flagImg = countryFlagImg(COUNTRY_FLAGS[country]);
+            cards += '<div class="card" data-searchable="' + country.toLowerCase() + '" data-group="' + group.title + '">'
+                + '<div class="card-left">' + flagImg + '<span class="card-name">' + country + '</span></div>'
+                + '<div class="card-links">' + badges + '</div></div>';
+        });
+        container.insertAdjacentHTML('beforeend',
+            '<div class="group-section brand-' + brandKey.toLowerCase() + '" data-group-id="' + group.title + '">'
+            + '<div class="group-header"><span class="group-label">' + group.title + '</span><span style="flex:1;height:1px;background:var(--border);margin:0 0.5rem;"></span>'
+            + '<span class="group-count">' + group.countries.length + '</span></div>'
+            + '<div class="grid">' + cards + '</div></div>');
+    });
+}
+
+function renderImportantSites() {
+    const container = document.getElementById('important-sites');
+    let cards = importantSitesData.map(site =>
+        '<div class="card" data-searchable="' + site.name.toLowerCase() + '">'
+        + '<div class="card-name">' + site.name + '</div>'
+        + '<div class="card-links"><a href="' + site.url + '" target="_blank" class="link-badge">Open →</a></div></div>'
+    ).join('');
+    container.innerHTML = '<div class="group-section"><div class="group-header"><span class="group-label">Resources</span><span class="group-line"></span></div><div class="grid">' + cards + '</div></div>';
+}
+
+function renderEmails() {
+    const container = document.getElementById('emails-section');
+    let html = '<div class="group-section"><div class="group-header"><span class="group-label">Email Templates</span><span class="group-line"></span></div>';
+    emailGroups.forEach(g => {
+        const template = g.greeting + '\n\nWe kindly ask for needed translation for update in Update-name\nPlease provide them as soon as possible so we can prepare this update.\n\nBest regards,';
+        const toChips = g.to.map(r => '<span class="recip-chip">' + r.name + ' &lt;' + r.email + '&gt;</span>').join('');
+        const ccChips = g.cc.map(r => '<span class="recip-chip">' + r.name + ' &lt;' + r.email + '&gt;</span>').join('');
+        html += '<div class="email-card">'
+            + '<div class="email-card-title-row"><div class="email-card-title">' + g.title + '</div>'
+            + '<button class="copy-btn" data-copy-title="' + g.id + '">Copy Title</button></div>'
+            + '<div class="email-two-col">'
+            + '<div><div class="email-box-label"><span>Template</span><button class="copy-btn" data-copy-tpl="' + g.id + '">Copy</button></div>'
+            + '<div class="email-box" id="tpl-' + g.id + '">' + template + '</div></div>'
+            + '<div><div class="email-box-label"><span>Recipients</span></div>'
+            + '<div class="recipients-box">'
+            + '<div class="recip-group"><div class="recip-group-header"><div class="recip-group-label">To</div><button class="copy-btn" data-copy-to="' + g.id + '">Copy To</button></div><div class="recip-chips" id="to-' + g.id + '">' + toChips + '</div></div>'
+            + '<div class="recip-group"><div class="recip-group-header"><div class="recip-group-label">CC</div><button class="copy-btn" data-copy-cc="' + g.id + '">Copy CC</button></div><div class="recip-chips" id="cc-' + g.id + '">' + ccChips + '</div></div>'
+            + '</div></div></div></div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    container.querySelectorAll('[data-copy-title]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const g = emailGroups.find(x => x.id === btn.getAttribute('data-copy-title'));
+            if (g) copyToClipboard(g.title, btn, 'Copy Title');
+        });
+    });
+    container.querySelectorAll('[data-copy-tpl]').forEach(btn => {
+        btn.addEventListener('click', () => copyToClipboard(document.getElementById('tpl-' + btn.getAttribute('data-copy-tpl')).innerText, btn, 'Copy'));
+    });
+    container.querySelectorAll('[data-copy-to]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const g = emailGroups.find(x => x.id === btn.getAttribute('data-copy-to'));
+            if (g) copyToClipboard(g.to.map(r => r.name + ' <' + r.email + '>').join(', '), btn, 'Copy To');
+        });
+    });
+    container.querySelectorAll('[data-copy-cc]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const g = emailGroups.find(x => x.id === btn.getAttribute('data-copy-cc'));
+            if (g) copyToClipboard(g.cc.map(r => r.name + ' <' + r.email + '>').join(', '), btn, 'Copy CC');
+        });
+    });
+}
+
+function copyToClipboard(text, btn, label) {
+    const doIt = () => { btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = label; btn.classList.remove('copied'); }, 2000); };
+    navigator.clipboard.writeText(text).then(doIt).catch(() => {
+        const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); doIt();
+    });
+}
+
+
+// ═══════════════════════════════════
+// TOOLS DATA & RENDER
+// ═══════════════════════════════════
+const toolsData = [
+    {
+        name: "Reffine Translation Hub",
+        url: "translation.html",
+        desc: "Translation hub for MENA markets"
+    },
+    {
+        name: "Reffine Translation Tool",
+        url: "translation-tool.html",
+        desc: "Excel translation management tool for MENA markets"
+    },
+    {
+        name: "Reffine SEO Tool",
+        url: "seo-tool.html",
+        desc: "SEO analysis and optimisation tool"
+    },
+    {
+        name: "Reffine Offer Generator",
+        url: "offer-generator.html",
+        desc: "Generate and manage offers for MENA markets"
+    }
+];
+
+function renderTools() {
+    const container = document.getElementById('tools-section');
+    if (!container) return;
+    const iconTranslateHub = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+    const iconTranslateTool = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>';
+    const iconSEO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>';
+    const iconOffer = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
+    const icons = [iconTranslateHub, iconTranslateTool, iconSEO, iconOffer];
+
+    let html = '<div class="group-section"><div class="group-header"><span class="group-label">Reffine Tools</span><span class="group-line"></span></div>';
+    html += '<div class="tools-grid">';
+    toolsData.forEach((tool, i) => {
+        const isLocal = !tool.url.startsWith('http');
+        const displayUrl = isLocal ? tool.url.replace('.html','') : tool.url.replace('https://', '');
+        html += '<a href="' + tool.url + '" ' + (isLocal ? '' : 'target="_blank"') + ' class="tool-card">'
+            + '<div class="tool-card-icon">' + (icons[i] || icons[0]) + '</div>'
+            + '<div><div class="tool-card-name">' + tool.name + '</div>'
+            + '<div class="tool-card-url">' + displayUrl + '</div></div>'
+            + '<div class="tool-card-arrow">Open Tool <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17 17 7M7 7h10v10"/></svg></div>'
+            + '</a>';
+    });
+    html += '</div></div>';
+    container.innerHTML = html;
+}
+
+// Init
+renderBrandCards("LRDX", "lrdx");
+renderBrandCards("RR",   "rr");
+renderBrandCards("JDX",  "jdx");
+renderImportantSites();
+renderEmails();
+// renderTools(); // tools section removed — tools are in nav
+
+// Countdowns — called AFTER render, wrapped so any error won't break the page
+try { updateMeetingCountdowns(); } catch(e) { console.warn('Countdown error:', e); }
+setInterval(function(){ try { updateMeetingCountdowns(); } catch(e){} }, 1000);
+
+// ═══════════════════════════════════
+// SIDEBAR BRAND BUTTONS
+// ═══════════════════════════════════
+const brandPanels = { lrdx: document.getElementById('lrdx'), rr: document.getElementById('rr'), jdx: document.getElementById('jdx') };
+
+function switchBrand(id) {
+
+    Object.entries(brandPanels).forEach(([k, el]) => el.style.display = k === id ? 'block' : 'none');
+    activeBrand = id;
+}
+
+
+// ═══════════════════════════════════
+// REGION FILTER
+// ═══════════════════════════════════
+let activeRegion = 'all';
+
+// ═══════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+function applyFilters() {
+    const term = document.getElementById('searchInput').value.toLowerCase().trim();
+    document.querySelectorAll('.brand-panel').forEach(panel => {
+        panel.querySelectorAll('.group-section').forEach(section => {
+            const groupId = section.getAttribute('data-group-id');
+            const groupMatch = activeRegion === 'all' || groupId === activeRegion;
+            let visible = 0;
+            section.querySelectorAll('.card').forEach(card => {
+                const nameMatch = (card.getAttribute('data-searchable') || '').includes(term);
+                const show = groupMatch && nameMatch;
+                card.style.display = show ? 'flex' : 'none';
+                if (show) visible++;
+            });
+            section.style.display = (visible > 0 && groupMatch) ? 'block' : 'none';
+        });
+    });
+}
+
+// ═══════════════════════════════════
+// MODE SELECTOR
+// ═══════════════════════════════════
+const importantEl = document.getElementById('important-sites');
+const emailsEl = document.getElementById('emails-section');
+const brandBadgesAll = () => document.querySelectorAll('.brand-link');
+
+function showMode(mode) {
+    // Hide everything
+    const toolsEl = document.getElementById('tools-section');
+    Object.values(brandPanels).forEach(el => el.style.display = 'none');
+    importantEl.style.display = 'none';
+    emailsEl.style.display = 'none';
+    if (toolsEl) toolsEl.style.display = 'none';
+    document.body.classList.remove('cms-mode-active');
+
+    // Highlight Resources/Emails buttons in rf-topnav
+    var rfRes = document.getElementById('rfBtnResources');
+    var rfEml = document.getElementById('rfBtnEmails');
+    if (rfRes) rfRes.classList.toggle('rf-active', mode === 'important');
+    if (rfEml) rfEml.classList.toggle('rf-active', mode === 'emails');
+
+    if (mode === 'tools') {
+        const tEl = document.getElementById('tools-section');
+        if (tEl) tEl.style.display = 'block';
+        activeBrand = 'other';
+    } else if (mode === 'emails') {
+        emailsEl.style.display = 'block';
+        activeBrand = 'other';
+    } else if (mode === 'important') {
+        importantEl.style.display = 'block';
+        activeBrand = 'other';
+    } else {
+        const cur = activeBrand !== 'other' ? activeBrand : 'lrdx';
+        brandPanels[cur].style.display = 'block';
+        activeBrand = cur;
+        if (mode === 'cms') {
+            document.body.classList.add('cms-mode-active');
+            brandBadgesAll().forEach(b => b.href = b.getAttribute('data-cms-url'));
+        } else {
+            brandBadgesAll().forEach(b => b.href = b.getAttribute('data-live-url'));
+        }
+    }
+}
+
+document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener('change', e => showMode(e.target.value)));
+
+// Handle deep-link hashes (index.html#resources / index.html#emails)
+function handleHash(){
+  var hash = window.location.hash;
+  if (hash === '#resources') { showMode('important'); }
+  else if (hash === '#emails') { showMode('emails'); }
+}
+// Fire after render
+setTimeout(handleHash, 50);
+window.addEventListener('hashchange', handleHash);
+
+// ═══════════════════════════════════
+// MOBILE FILTER BAR
+// ═══════════════════════════════════
+document.querySelectorAll('.mobile-brand-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const brand = btn.getAttribute('data-mbrand');
+        showMode('live');
+        switchBrand(brand);
+        // Update mobile active classes
+        document.querySelectorAll('.mobile-brand-btn').forEach(b => {
+            b.className = 'mobile-brand-btn';
+        });
+        btn.classList.add('active-' + brand);
+    });
+});
+
+document.querySelectorAll('.mobile-region-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const region = btn.getAttribute('data-mregion');
+        // Sync with sidebar region pills
+        activeRegion = region;
+        document.querySelectorAll('.mobile-region-btn').forEach(b => b.classList.toggle('active', b === btn));
+        applyFilters();
+    });
+});
+
+// ── Panel collapse/expand ──
+(function(){
+  var layout = document.querySelector('.layout');
+  var btn    = document.getElementById('panelToggleBtn');
+  var stored = localStorage.getItem('rf_panel_hidden');
+
+  if (stored === '1') {
+    layout.classList.add('left-hidden');
+  }
+
+  window.toggleLeftPanel = function() {
+    var hidden = layout.classList.toggle('left-hidden');
+    localStorage.setItem('rf_panel_hidden', hidden ? '1' : '0');
+  };
+})();
+
+</script>
+
+<footer class="rf-footer">
+  <div class="rf-footer-inner">
+    <span class="rf-footer-brand">Reffine &middot; MENA &middot; JLR Hub</span>
+    <div class="rf-footer-links">
+      <a href="index.html"            class="rf-footer-link" data-rfpage="index">Dashboard</a>
+      <a href="translation.html"      class="rf-footer-link" data-rfpage="translation">Translate</a>
+      <a href="translation-tool.html" class="rf-footer-link" data-rfpage="translation-tool">Translate Tool</a>
+      <a href="seo-tool.html"         class="rf-footer-link" data-rfpage="seo-tool">SEO</a>
+      <a href="offer-generator.html"  class="rf-footer-link" data-rfpage="offer-generator">Offers</a>
+      <a href="retailer-locator.html" class="rf-footer-link" data-rfpage="retailer-locator">Retailers</a>
+      <a href="login.html"            class="rf-footer-link" data-rfpage="admin" style="color:rgba(138,142,156,0.35);">Admin</a>
+    </div>
+  </div>
+</footer>
+<script>
+(function(){
+  var p=(location.pathname.split('/').pop()||'index.html').replace('.html','')||'index';
+  document.querySelectorAll('.rf-footer-link[data-rfpage]').forEach(function(a){
+    if(a.getAttribute('data-rfpage')===p) a.classList.add('rf-active');
+  });
+})();
+</script>
+
+
+
+
+
+
+
+
+<script>
+/* ══════════════════════════════════════════════════════
+   MENA CONTENT TASKS — clean rewrite
+   Sheet columns (row 1 = headers, data from row 2):
+     A=TASK  B=Current status  C=Comment
+     D=URLs  E=Assigned Specialist  F=DEADLINE  G=JIRA Ticket
+══════════════════════════════════════════════════════ */
+(function(){
+
+  /* ── CONFIG ─────────────────────────────────────────────── */
+  var CSV_DEFAULT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT37HhHJ0CJ3SqWg8WV3Wa9HRAqxiRyYyuv5uwOqFRXaIzKDNID_gDMG8qTvkEAXVK9WveXpAoI9YKI/pub?gid=110196541&single=true&output=csv';
+  var CSV_URL = (function(){ try { return localStorage.getItem('rf_tasks_csv_url') || CSV_DEFAULT; } catch(e) { return CSV_DEFAULT; } })();
+  var PROXIES = [
+    function(u){ return u; },
+    function(u){ return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u); },
+    function(u){ return 'https://corsproxy.io/?'+encodeURIComponent(u); }
+  ];
+  var REFRESH = 5 * 60 * 1000;
+
+  /* ── STATE ───────────────────────────────────────────────── */
+  var rows = [], filtered = [], loading = false, lastSync = 0;
+  var fStatus = '', fSpec = '', fSearch = '';
+
+  /* ── STATUS COLOURS ─────────────────────────────────────── */
+  var STATUS = {
+    'in progress': { bg:'rgba(232,151,58,.14)', border:'rgba(232,151,58,.45)', color:'#e8973a' },
+    'done':        { bg:'rgba(0,208,132,.12)',   border:'rgba(0,208,132,.4)',  color:'#00d084' },
+    'blocked':     { bg:'rgba(232,66,74,.13)',   border:'rgba(232,66,74,.4)', color:'#e8424a' },
+    'review':      { bg:'rgba(91,141,238,.13)',  border:'rgba(91,141,238,.4)','color':'#5b8dee' },
+  };
+  function statusStyle(s){
+    var k=(s||'').toLowerCase().trim();
+    var c=STATUS[k]||{bg:'rgba(138,142,156,.1)',border:'rgba(138,142,156,.3)',color:'#8a8e9c'};
+    return c;
+  }
+
+  /* ── SPECIALIST COLOURS ─────────────────────────────────── */
+  var PALETTE=['#00d084','#5b8dee','#e8973a','#9b7ee8','#e8424a','#c9a96e','#22c55e','#f472b6','#38bdf8'];
+  var specMap={}, specIdx=0;
+  function specColor(n){
+    var k=(n||'').trim().toLowerCase(); if(!k) return '#8a8e9c';
+    if(!specMap[k]){ specMap[k]=PALETTE[specIdx%PALETTE.length]; specIdx++; }
+    return specMap[k];
+  }
+
+  /* ── CSV PARSER ─────────────────────────────────────────── */
+  function parseCSV(txt){
+    var rows=[],cur='',inQ=false,cells=[];
+    for(var i=0;i<txt.length;i++){
+      var c=txt[i];
+      if(c==='"'){ if(inQ&&txt[i+1]==='"'){cur+='"';i++;}else{inQ=!inQ;} }
+      else if(c===','&&!inQ){ cells.push(cur.trim());cur=''; }
+      else if((c==='\n'||c==='\r')&&!inQ){
+        cells.push(cur.trim());cur='';
+        if(cells.join('').trim()) rows.push(cells);
+        cells=[];
+        if(c==='\r'&&txt[i+1]==='\n') i++;
+      } else { cur+=c; }
+    }
+    if(cells.length||cur){ cells.push(cur.trim()); if(cells.join('').trim()) rows.push(cells); }
+    return rows;
+  }
+
+  /* ── LOAD ────────────────────────────────────────────────── */
+  function load(){
+    /* Check admin overrides first */
+    try{
+      var ov=JSON.parse(localStorage.getItem('rf_tasks_override')||'{}');
+      var k=Object.keys(ov)[0]; /* use first available tab */
+      if(k&&ov[k]&&ov[k].length){ rows=ov[k]; filter(); render(); }
+    }catch(e){}
+
+    loading=true; render();
+    attempt(0);
+  }
+
+  function attempt(idx){
+    if(idx>=PROXIES.length){
+      loading=false;
+      render();
+      console.error('TT: all proxies failed');
+      return;
+    }
+    var url = PROXIES[idx](CSV_URL);
+    console.log('TT: trying proxy',idx,'→',url.slice(0,80)+'…');
+    fetch(url,{cache:'no-store'})
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.text();
+      })
+      .then(function(txt){
+        var t=txt.trim();
+        if(!t||t[0]==='<'){ throw new Error('got HTML'); }
+        console.log('TT: got CSV via proxy',idx,', first 100 chars:',t.slice(0,100));
+        var parsed=parseCSV(txt);
+        console.log('TT: parsed',parsed.length,'rows, headers:',parsed[0]);
+        if(!parsed||parsed.length<2){ throw new Error('no data rows'); }
+
+        /* ── Header detection: scan first 5 rows for the one containing "task", map all columns by name ── */
+        var headerRowIdx=0;
+        for(var hi=0;hi<Math.min(parsed.length,5);hi++){
+          if(parsed[hi].join('').toLowerCase().indexOf('task')!==-1){ headerRowIdx=hi; break; }
+        }
+        var hdrs=parsed[headerRowIdx].map(function(h){ return h.toLowerCase().trim(); });
+        console.log('TT: header row',headerRowIdx,'cols:',hdrs);
+
+        function colIdx(candidates){
+          for(var i=0;i<candidates.length;i++){
+            var exact=hdrs.indexOf(candidates[i]);
+            if(exact!==-1) return exact;
+          }
+          for(var i=0;i<candidates.length;i++){
+            for(var j=0;j<hdrs.length;j++){
+              if(hdrs[j].indexOf(candidates[i])!==-1) return j;
+            }
+          }
+          return -1;
+        }
+
+        var iTask      = colIdx(['task']);
+        var iStatus    = colIdx(['current status','status']);
+        var iComment   = colIdx(['comment','comments','notes']);
+        var iUrl       = colIdx(['urls','url','link','links']);
+        var iSpec      = colIdx(['asigned specialist','assigned specialist','specialist','assignee','owner','person']);
+        var iDeadline  = colIdx(['deadline','due date','due']);
+        var iJira      = colIdx(['jira ticket','jira','ticket']);
+
+        console.log('TT: col map → task='+iTask+' status='+iStatus+' comment='+iComment+' url='+iUrl+' specialist='+iSpec+' deadline='+iDeadline+' jira='+iJira);
+
+        function cell(c,i){ return (i>=0&&i<c.length)?(c[i]||''):''; }
+
+        rows=parsed.slice(headerRowIdx+1).map(function(c){
+          return{
+            task:       cell(c,iTask),
+            status:     cell(c,iStatus),
+            comment:    cell(c,iComment),
+            url:        cell(c,iUrl),
+            specialist: cell(c,iSpec),
+            deadline:   cell(c,iDeadline),
+            jira:       cell(c,iJira)
+          };
+        }).filter(function(r){ return r.task.trim().length>0; });
+        loading=false; lastSync=Date.now();
+        filter(); render();
+        console.log('TT: loaded',rows.length,'tasks');
+      })
+      .catch(function(e){
+        console.warn('TT proxy',idx,'failed:',e.message);
+        attempt(idx+1);
+      });
+  }
+
+  /* ── FILTER ─────────────────────────────────────────────── */
+  function filter(){
+    filtered=rows.filter(function(r){
+      var s=(r.status||'').toLowerCase();
+      var sp=(r.specialist||'').toLowerCase();
+      var ok1=!fStatus   || s.indexOf(fStatus.toLowerCase())!==-1;
+      var ok2=!fSpec     || sp.indexOf(fSpec.toLowerCase())!==-1;
+      var ok3=!fSearch   || (r.task+r.comment+r.specialist).toLowerCase().indexOf(fSearch)!==-1;
+      return ok1&&ok2&&ok3;
+    });
+  }
+
+  /* ── RENDER ─────────────────────────────────────────────── */
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function render(){
+    var el=document.getElementById('taskTracker'); if(!el) return;
+
+    /* Stats */
+    var total=rows.length;
+    var done=rows.filter(function(r){return(r.status||'').toLowerCase().indexOf('done')!==-1;}).length;
+    var inp=rows.filter(function(r){return(r.status||'').toLowerCase().indexOf('in progress')!==-1;}).length;
+    var pct=total?Math.round(done/total*100):0;
+
+    /* Unique specialists for filter */
+    var specs={};
+    rows.forEach(function(r){ if(r.specialist.trim()) specs[r.specialist.trim()]=1; });
+    var specList=Object.keys(specs).sort();
+
+    /* Sync label */
+    var syncLabel='';
+    if(loading) syncLabel='<span style="color:#e8973a;font-size:.58rem;display:flex;align-items:center;gap:4px;"><svg style="animation:ttSpin 1s linear infinite" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 12a9 9 0 1 0 9-9A9.75 9.75 0 0 0 3.6 5.1L3 8"/><path d="M3 3v5h5"/></svg>Loading…</span>';
+    else if(lastSync) { var d=new Date(lastSync); syncLabel='<span style="color:rgba(138,142,156,.5);font-size:.55rem;">↻ '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'</span>'; }
+
+    var H='';
+
+    /* ── Header bar ── */
+    H+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:10px;flex-shrink:0;">';
+    H+='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00d084" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+    H+='<span style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#f0f0f0;">Content Tasks</span>';
+    H+=syncLabel;
+    H+='<button onclick="ttRefresh()" style="margin-left:auto;display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:4px;font-size:.6rem;font-weight:600;cursor:pointer;font-family:inherit;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#8a8e9c;transition:all .15s;" onmouseover="this.style.color=\'#f0f0f0\'" onmouseout="this.style.color=\'#8a8e9c\'">'
+      +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9A9.75 9.75 0 0 0 3.6 5.1L3 8"/><path d="M3 3v5h5"/></svg>Refresh</button>';
+    H+='</div>';
+
+    /* ── Stat cards ── */
+    H+='<div style="display:flex;gap:8px;margin-bottom:10px;flex-shrink:0;">';
+    H+=sc(total,'Total','#8a8e9c','');
+    H+=sc(inp,'In Progress','#e8973a','in progress');
+    H+=sc(done,'Done','#00d084','done');
+    /* Progress bar */
+    H+='<div style="flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:8px 12px;display:flex;flex-direction:column;gap:5px;justify-content:center;">'
+      +'<div style="display:flex;justify-content:space-between;"><span style="font-size:.55rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(138,142,156,.55);">Progress</span>'
+      +'<span style="font-size:.7rem;font-weight:700;color:#00d084;">'+pct+'%</span></div>'
+      +'<div style="height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;">'
+      +'<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#00a86b,#00d084);border-radius:2px;transition:width .5s;"></div>'
+      +'</div></div>';
+    H+='</div>';
+
+    /* ── Filter bar ── */
+    H+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-shrink:0;flex-wrap:wrap;">';
+    /* Search */
+    H+='<div style="flex:1;min-width:130px;position:relative;">'
+      +'<svg style="position:absolute;left:7px;top:50%;transform:translateY(-50%);pointer-events:none;color:rgba(138,142,156,.4)" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'
+      +'<input id="ttSearchInput" type="text" placeholder="Search…" value="'+esc(fSearch)+'" oninput="ttSetSearch(this.value)" '
+      +'class="tt-search-input" style="width:100%;">'
+      +'</div>';
+    /* Status filter */
+    H+='<select onchange="ttSetStatus(this.value)" class="tt-filter-sel">'
+      +'<option value=""'+(fStatus?'':' selected')+'>All Status</option>'
+      +'<option value="in progress"'+(fStatus==='in progress'?' selected':'')+'>In Progress</option>'
+      +'<option value="done"'+(fStatus==='done'?' selected':'')+'>Done</option>'
+      +'<option value="blocked"'+(fStatus==='blocked'?' selected':'')+'>Blocked</option>'
+      +'</select>';
+    /* Specialist filter */
+    H+='<select onchange="ttSetSpec(this.value)" class="tt-filter-sel">'
+      +'<option value="">All People</option>';
+    specList.forEach(function(s){ H+='<option value="'+esc(s)+'"'+(fSpec===s?' selected':'')+'>'+esc(s)+'</option>'; });
+    H+='</select>';
+    H+='<span style="font-size:.6rem;color:rgba(138,142,156,.4);white-space:nowrap;">'+filtered.length+'/'+total+'</span>';
+    H+='</div>';
+
+    /* ── Table ── */
+    H+='<div style="flex:1;min-height:0;overflow-y:auto;border:1px solid rgba(255,255,255,.07);border-radius:6px;">';
+
+    if(loading&&!rows.length){
+      H+='<div style="display:flex;align-items:center;justify-content:center;height:100px;gap:8px;color:rgba(138,142,156,.5);font-size:.72rem;">'
+        +'<svg style="animation:ttSpin 1s linear infinite" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00d084" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9A9.75 9.75 0 0 0 3.6 5.1L3 8"/><path d="M3 3v5h5"/></svg>'
+        +'Loading tasks…</div>';
+    } else if(!filtered.length){
+      H+='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100px;gap:6px;color:rgba(138,142,156,.35);font-size:.7rem;">'
+        +'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'
+        +(rows.length?'No tasks match your filters':'No tasks loaded yet — click Refresh')
+        +'</div>';
+    } else {
+      var thS='padding:7px 10px;font-size:.54rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(138,142,156,.55);background:#0d0f12;border-bottom:1px solid rgba(255,255,255,.07);text-align:left;white-space:nowrap;';
+      H+='<table style="width:100%;border-collapse:collapse;">'
+        +'<thead><tr style="position:sticky;top:0;z-index:2;">'
+        +'<th style="'+thS+'width:30%">Task</th>'
+        +'<th style="'+thS+'width:11%">Status</th>'
+        +'<th style="'+thS+'width:28%">Comment</th>'
+        +'<th style="'+thS+'width:12%">Specialist</th>'
+        +'<th style="'+thS+'width:8%">Deadline</th>'
+        +'<th style="'+thS+'width:11%">Links</th>'
+        +'</tr></thead><tbody>';
+
+      filtered.forEach(function(r,i){
+        var even=i%2===0;
+        var bg=even?'rgba(255,255,255,.012)':'transparent';
+        var st=statusStyle(r.status);
+        var isDone=(r.status||'').toLowerCase().indexOf('done')!==-1;
+        var sc2=specColor(r.specialist);
+
+        H+='<tr style="background:'+bg+';border-bottom:1px solid rgba(255,255,255,.04);" '
+          +'onmouseover="this.style.background=\'rgba(0,208,132,.035)\'" '
+          +'onmouseout="this.style.background=\''+bg+'\'">';
+
+        /* Task */
+        H+='<td style="padding:9px 10px;vertical-align:top;">'
+          +'<div style="font-size:.69rem;font-weight:600;color:'+(isDone?'var(--tt-done-color,rgba(240,240,240,.4))':'#f0f0f0')+';line-height:1.4;'+(isDone?'text-decoration:line-through;':'')+'">'
+          +esc(r.task)+'</div>';
+        H+='</td>';
+
+        /* Status badge */
+        H+='<td style="padding:9px 10px;vertical-align:top;white-space:nowrap;">'
+          +'<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:.58rem;font-weight:700;background:'+st.bg+';border:1px solid '+st.border+';color:'+st.color+';">'
+          +'<span style="width:5px;height:5px;border-radius:50%;background:'+st.color+';flex-shrink:0;"></span>'
+          +esc(r.status||'—')+'</span>'
+          +'</td>';
+
+        /* Comment */
+        H+='<td style="padding:9px 10px;vertical-align:top;">'
+          +'<div style="font-size:.62rem;color:rgba(138,142,156,.75);line-height:1.55;max-height:54px;overflow:hidden;">'
+          +esc((r.comment||'').slice(0,140))+(r.comment.length>140?'…':'')+'</div>'
+          +'</td>';
+
+        /* Specialist */
+        H+='<td style="padding:9px 10px;vertical-align:top;white-space:nowrap;">';
+        if(r.specialist.trim()){
+          H+='<span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:.6rem;font-weight:700;background:'+sc2+'18;border:1px solid '+sc2+'44;color:'+sc2+';">'
+            +esc(r.specialist)+'</span>';
+        } else { H+='<span style="color:rgba(138,142,156,.3);font-size:.6rem;">—</span>'; }
+        H+='</td>';
+
+        /* Deadline */
+        H+='<td style="padding:9px 10px;vertical-align:top;font-size:.63rem;color:'+(r.deadline?'rgba(201,169,110,.85)':'rgba(138,142,156,.3)')+';white-space:nowrap;">'
+          +esc(r.deadline||'—')+'</td>';
+
+        /* Links */
+        H+='<td style="padding:9px 10px;vertical-align:top;">'
+          +'<div style="display:flex;flex-direction:column;gap:4px;">';
+        if(r.jira&&r.jira.trim()){
+          var jiraLabel=(r.jira.match(/[A-Z]+-\d+/)||['JIRA'])[0];
+          H+='<a href="'+esc(r.jira)+'" target="_blank" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;font-size:.55rem;font-weight:700;background:rgba(91,141,238,.12);border:1px solid rgba(91,141,238,.3);color:#5b8dee;text-decoration:none;white-space:nowrap;">'
+            +'<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>'
+            +jiraLabel+'</a>';
+        }
+        if(r.url&&r.url.trim()){
+          H+='<a href="'+esc(r.url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;font-size:.55rem;font-weight:700;background:rgba(0,208,132,.08);border:1px solid rgba(0,208,132,.25);color:#00d084;text-decoration:none;white-space:nowrap;">'
+            +'<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+            +'URL</a>';
+        }
+        if(!r.jira&&!r.url) H+='<span style="color:rgba(138,142,156,.3);font-size:.6rem;">—</span>';
+        H+='</div></td>';
+        H+='</tr>';
+      });
+      H+='</tbody></table>';
+    }
+    H+='</div>';
+
+    /* Inject keyframes once */
+    if(!document.getElementById('ttCSS')){
+      var s=document.createElement('style');
+      s.id='ttCSS';
+      s.textContent='@keyframes ttSpin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(s);
+    }
+
+    el.innerHTML=H;
+  }
+
+  function sc(n,label,color,filterVal){
+    var isActive = filterVal && fStatus === filterVal;
+    var bg = isActive ? 'rgba('+( filterVal==='in progress'?'232,151,58':'0,208,132' )+',.18)' : 'rgba(255,255,255,.03)';
+    var border = isActive ? 'rgba('+( filterVal==='in progress'?'232,151,58':'0,208,132' )+',.5)' : 'rgba(255,255,255,.07)';
+    var cursor = filterVal ? 'cursor:pointer;' : '';
+    var onclick = filterVal ? 'onclick="ttStatClick(\'' + filterVal + '\')"' : '';
+    var title = filterVal ? 'title="Filter by '+label+'"' : '';
+    return '<div '+onclick+' '+title+' style="background:'+bg+';border:1px solid '+border+';border-radius:6px;padding:8px 12px;min-width:60px;text-align:center;flex-shrink:0;'+cursor+'transition:background .15s,border .15s;">'
+      +'<div style="font-size:1rem;font-weight:700;color:'+color+';line-height:1;">'+n+'</div>'
+      +'<div style="font-size:.52rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:rgba(138,142,156,.5);margin-top:2px;">'+label+'</div>'
+      +'</div>';
+  }
+
+  /* ── PUBLIC API ──────────────────────────────────────────── */
+  window.ttRefresh   = function(){ load(); };
+  window.ttSetSearch = function(v){ fSearch=v.toLowerCase().trim(); filter(); render(); };
+  window.ttSetStatus = function(v){ fStatus=v; filter(); render(); };
+  window.ttSetSpec   = function(v){ fSpec=v; filter(); render(); };
+  window.ttStatClick = function(v){ fStatus=(fStatus===v?'':v); filter(); render(); };
+
+  /* ── INIT ────────────────────────────────────────────────── */
+  render(); /* show skeleton */
+  load();
+  setInterval(load, REFRESH);
+
+}());
+</script>
+
+</body>
+</html>

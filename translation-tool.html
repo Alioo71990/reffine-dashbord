@@ -1,0 +1,2237 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel File Translator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (xlsx) library for Excel processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+/* ── REFFINE THEME VARIABLES ── */
+:root {
+  --bg:         #0a0b0d;
+  --surface:    #111316;
+  --surface-2:  #16181c;
+  --surface-3:  #1c1f24;
+  --border:     rgba(255,255,255,0.07);
+  --border-2:   rgba(255,255,255,0.12);
+  --text:       #f0f0f0;
+  --text-2:     #8a8e9c;
+  --text-3:     rgba(138,142,156,0.5);
+  --accent:     #00d084;
+  --accent-bg:  rgba(0,208,132,0.09);
+  --accent-brd: rgba(0,208,132,0.25);
+  --danger:     #e8424a;
+  --danger-bg:  rgba(232,66,74,0.1);
+  --warn:       #e8973a;
+  --warn-bg:    rgba(232,151,58,0.1);
+  --success-bg: rgba(0,208,132,0.1);
+}
+body.rf-light {
+  --bg:         #f0f2f5;
+  --surface:    #ffffff;
+  --surface-2:  #f5f7fa;
+  --surface-3:  #edf0f4;
+  --border:     rgba(0,0,0,0.09);
+  --border-2:   rgba(0,0,0,0.14);
+  --text:       #1a1d23;
+  --text-2:     #52596b;
+  --text-3:     rgba(82,89,107,0.55);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 14px; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
+/* ── PAGE WRAPPER ── */
+.tt-page {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 80px 1rem 3rem;
+}
+.tt-container {
+  width: 100%;
+  max-width: 780px;
+}
+.tt-page-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.tt-page-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+.tt-page-title span { color: var(--accent); }
+.tt-page-sub {
+  font-size: 0.7rem;
+  color: var(--text-3);
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
+/* ── TOOL CARD ── */
+.tool-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 0;
+  position: relative;
+  transition: border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+}
+.tool-section:hover { border-color: var(--border-2); }
+
+
+.tool-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 1.25rem;
+}
+.tool-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.tool-number {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-brd);
+  padding: 2px 7px;
+  border-radius: 3px;
+  letter-spacing: 0.08em;
+}
+
+/* ── FIELD LABEL ── */
+.tt-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
+
+/* ── DROP ZONE ── */
+.file-drop-zone {
+  background: var(--surface-2);
+  border: 1.5px dashed var(--border-2);
+  border-radius: 7px;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+.file-drop-zone:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.file-drop-zone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  box-shadow: 0 0 0 3px rgba(0,208,132,0.1);
+}
+.file-drop-zone p, .file-drop-zone .drop-text {
+  color: var(--text-3);
+  font-size: 0.7rem;
+}
+
+/* ── SPLIT DB BOX ── */
+.db-split {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  flex: 1;
+  min-height: 140px;
+}
+.db-half {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.db-half-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.db-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 4px;
+}
+.db-divider-line {
+  flex: 1;
+  width: 1px;
+  background: var(--border);
+}
+.db-divider-or {
+  font-size: 0.58rem;
+  color: var(--text-3);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+/* ── DRIVE SELECT ── */
+.drive-select {
+  width: 100%;
+  background: var(--surface-3);
+  border: 1px solid var(--border-2);
+  border-radius: 5px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  padding: 6px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.drive-select:focus { border-color: var(--accent); }
+.drive-select option { background: var(--surface); }
+
+.drive-load-btn {
+  width: 100%;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-brd);
+  border-radius: 5px;
+  color: var(--accent);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.04em;
+}
+.drive-load-btn:hover:not(:disabled) { background: rgba(0,208,132,0.18); }
+.drive-load-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.drive-status { font-size: 0.6rem; color: var(--text-3); text-align: center; min-height: 14px; }
+.drive-status.ok  { color: var(--accent); }
+.drive-status.err { color: var(--danger); }
+
+/* ── FILE LIST ITEMS ── */
+.file-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 0.68rem;
+  color: var(--text-2);
+}
+.file-list-item button {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+.file-list-item button:hover { color: var(--danger); }
+
+/* ── PROCESS BUTTON ── */
+.process-btn {
+  width: 100%;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: #061a0d;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 10px 24px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+.process-btn:hover:not(:disabled) { background: #00e896; }
+.process-btn:disabled { background: var(--surface-3); color: var(--text-3); cursor: not-allowed; border: 1px solid var(--border); }
+
+/* ── CLEAR BTN ── */
+.clear-btn {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.clear-btn:hover { color: var(--danger); border-color: rgba(232,66,74,0.3); background: var(--danger-bg); }
+
+/* ── INFO BTN ── */
+.info-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  border: 1px solid var(--border-2);
+  color: var(--text-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.info-btn:hover { color: var(--accent); border-color: var(--accent-brd); background: var(--accent-bg); }
+
+/* ── MESSAGE AREA ── */
+.message-area {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  opacity: 0;
+  transform: translateY(6px);
+  font-size: 0.7rem;
+  text-align: center;
+  margin-top: 10px;
+  min-height: 18px;
+}
+.message-area.show { opacity: 1; transform: translateY(0); }
+.message-area.text-green-600  { color: var(--accent); }
+.message-area.text-red-600    { color: var(--danger); }
+.message-area.text-slate-500  { color: var(--text-3); }
+
+/* missing translations list */
+.missing-list {
+  margin-top: 12px;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  max-height: 160px;
+  overflow-y: auto;
+  font-size: 0.62rem;
+  color: var(--text-2);
+}
+.missing-list p { font-weight: 700; margin-bottom: 6px; color: var(--text); }
+.missing-list li { font-family: 'IBM Plex Mono', monospace; margin: 3px 0; color: var(--text-2); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  transition: opacity 0.2s ease, visibility 0.2s;
+  visibility: hidden;
+  opacity: 0;
+}
+.modal-overlay.is-open { visibility: visible; opacity: 1; }
+.modal-content {
+  transition: transform 0.2s ease;
+  transform: scale(0.95);
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  color: var(--text);
+}
+.modal-overlay.is-open .modal-content { transform: scale(1); }
+.modal-content h3 { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
+.modal-content h4 { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-2); margin-bottom: 6px; margin-top: 12px; }
+.modal-content p  { font-size: 0.72rem; color: var(--text-2); line-height: 1.7; }
+.modal-content ul { font-size: 0.7rem; color: var(--text-2); line-height: 1.8; padding-left: 1.2rem; }
+.modal-content code { background: var(--surface-3); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-size: 0.65rem; color: var(--accent); }
+.modal-content strong { color: var(--text); font-weight: 600; }
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.modal-close-btn:hover { color: var(--text); }
+
+/* ── GRID ── */
+.tt-tools-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+/* ── 3-column equal layout inside each tool card ── */
+.three-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+@media (max-width: 700px) { .three-col-grid { grid-template-columns: 1fr; } }
+
+/* Each column is a flex column so the drop zone stretches */
+.col-box {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The drop zone / content box fills all remaining height */
+.col-drop {
+  flex: 1;
+  min-height: 140px;
+}
+
+/* Legacy - keep for any remaining references */
+.tt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1rem; }
+@media (max-width: 600px) { .tt-grid { grid-template-columns: 1fr; } }
+
+/* ── LIGHT THEME overrides for Tailwind classes still used ── */
+body.rf-light .bg-white { background: var(--surface) !important; }
+body.rf-light .text-slate-800 { color: var(--text) !important; }
+body.rf-light .text-slate-700 { color: var(--text-2) !important; }
+body.rf-light .text-slate-600 { color: var(--text-2) !important; }
+body.rf-light .text-slate-500 { color: var(--text-3) !important; }
+body.rf-light .border-slate-200 { border-color: var(--border) !important; }
+body.rf-light .bg-slate-50  { background: var(--surface-2) !important; }
+body.rf-light .bg-slate-100 { background: var(--surface-2) !important; }
+body.rf-light .bg-slate-200 { background: var(--surface-3) !important; }
+body.rf-light select { background: var(--surface-2) !important; color: var(--text) !important; }
+    
+
+/* ═══════════════════════════════════════════════════
+   REFFINE SHARED NAV CSS — same on all pages
+═══════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root { --border: rgba(255,255,255,0.07); --border-hov: rgba(255,255,255,0.14); --text: #f5f5f5; --text-2: #8a8e9c; --text-3: rgba(138,142,156,0.5); --accent: #00d084; }
+
+.rf-topnav {
+  position: fixed; top: 0; left: 0; right: 0; height: 60px;
+  background: rgba(10,11,13,0.96); border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex; align-items: center; padding: 0 1.5rem; gap: 0.75rem;
+  z-index: 9999; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  font-family: 'Inter', sans-serif; box-sizing: border-box; overflow: hidden;
+}
+.rf-nav-logo {
+  display: flex; flex-direction: column; gap: 1px; line-height: 1.1;
+  text-decoration: none; flex-shrink: 0; white-space: nowrap;
+}
+.rf-nav-logo .rf-logo-main { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; color: #f5f5f5; }
+.rf-nav-logo .rf-logo-sub  { font-size: 0.48rem; font-weight: 500; letter-spacing: 0.18em; color: rgba(138,142,156,0.45); text-transform: uppercase; }
+.rf-dot { color: #00d084; }
+.rf-topnav-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.08); flex-shrink: 0; }
+.rf-nav-right { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.rf-navlink {
+  padding: 0.3rem 0.65rem; border-radius: 4px; font-size: 0.66rem; font-weight: 600;
+  letter-spacing: 0.04em; color: #8a8e9c; text-decoration: none; transition: all 0.15s;
+  white-space: nowrap; border: 1px solid transparent; cursor: pointer;
+  background: none; font-family: 'Inter', sans-serif;
+}
+.rf-navlink:hover { color: #f5f5f5; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.06); }
+.rf-navlink.rf-active { color: #00d084; background: rgba(0,208,132,0.08); border-color: rgba(0,208,132,0.18); }
+
+/* Clocks */
+.rf-nav-clock { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+.rf-nav-clock canvas { border-radius: 50%; }
+.rf-clock-city { font-size: 0.52rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(138,142,156,0.5); display: block; }
+.rf-clock-time { font-size: 0.75rem; font-weight: 600; color: #f5f5f5; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; display: block; }
+
+/* Meeting countdown cards */
+.rf-meeting-cards { display: flex; gap: 0.4rem; align-items: stretch; flex-shrink: 0; }
+.rf-meeting-card {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 5px; padding: 0.28rem 0.6rem;
+  display: flex; flex-direction: column; gap: 0; text-decoration: none;
+  transition: border-color 0.15s; min-width: 100px; cursor: pointer;
+}
+.rf-meeting-card:hover { border-color: rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); }
+.rf-meeting-card.active-meeting { border-color: rgba(0,208,132,0.5); background: rgba(0,208,132,0.07); }
+.rf-meeting-title { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8a8e9c; white-space: nowrap; }
+.rf-meeting-countdown { font-size: 0.72rem; font-weight: 700; color: #f5f5f5; letter-spacing: 0.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rf-meeting-countdown.soon { color: #00d084; }
+.rf-meeting-countdown.now  { color: #e8424a; animation: rf-pulse 1s infinite; }
+.rf-meeting-sub { font-size: 0.48rem; color: rgba(138,142,156,0.5); white-space: nowrap; }
+@keyframes rf-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* Right section (clocks + cards) */
+.rf-right-section { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; flex-shrink: 0; }
+
+/* Hamburger */
+.rf-hamburger {
+  display: none; background: none; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px; padding: 6px 8px; cursor: pointer; flex-direction: column;
+  align-items: center; justify-content: center; flex-shrink: 0; gap: 4px;
+}
+.rf-hamburger span { display: block; width: 18px; height: 1.5px; background: #f5f5f5; border-radius: 2px; transition: all 0.25s; }
+.rf-hamburger.open span:nth-child(1) { transform: translateY(5.5px) rotate(45deg); }
+.rf-hamburger.open span:nth-child(2) { opacity: 0; }
+.rf-hamburger.open span:nth-child(3) { transform: translateY(-5.5px) rotate(-45deg); }
+
+/* Mobile drawer */
+.rf-mobile-drawer {
+  display: none; position: fixed; top: 60px; left: 0; right: 0; z-index: 9998;
+  background: rgba(10,11,13,0.98); border-bottom: 1px solid rgba(255,255,255,0.09);
+  padding: 0.75rem 1.5rem 1rem; flex-direction: column; gap: 2px;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.rf-mobile-drawer.open { display: flex; }
+.rf-drawer-link {
+  padding: 0.65rem 0.75rem; border-radius: 5px; font-size: 0.78rem; font-weight: 600;
+  color: #8a8e9c; text-decoration: none; border: 1px solid transparent; display: flex; align-items: center; gap: 8px;
+  background: none; font-family: 'Inter', sans-serif; cursor: pointer;
+}
+.rf-drawer-link:hover { color: #f5f5f5; background: rgba(255,255,255,0.04); }
+.rf-drawer-link.rf-active { color: #00d084; background: rgba(0,208,132,0.07); border-color: rgba(0,208,132,0.15); }
+
+/* Footer */
+.rf-footer { background: #0a0b0d; border-top: 1px solid rgba(255,255,255,0.06); padding: 1.25rem 2rem; font-family: 'Inter', sans-serif; }
+.rf-footer-inner { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.rf-footer-brand { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(138,142,156,0.32); }
+.rf-footer-links { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.rf-footer-link { padding: 0.28rem 0.65rem; border-radius: 4px; font-size: 0.67rem; font-weight: 500; letter-spacing: 0.04em; color: #8a8e9c; text-decoration: none; transition: color 0.15s; }
+.rf-footer-link:hover { color: #f5f5f5; }
+.rf-footer-link.rf-active { color: #00d084; }
+
+@media (max-width: 1200px) { .rf-right-section { display: none !important; } }
+
+
+
+@media (max-width: 1100px) { .rf-nav-right { display: none !important; } .rf-hamburger { display: flex !important; } }
+
+/* ── LIGHT THEME EXTRA FIXES ── */
+/* Clock text */
+body.rf-light .rf-clock-time { color: #0f1117 !important; }
+body.rf-light .rf-clock-city { color: rgba(82,89,107,0.6) !important; }
+
+/* Nav dividers */
+body.rf-light .rf-topnav-divider,
+body.rf-light [style*="background:rgba(255,255,255,0.08)"] { background: rgba(0,0,0,0.1) !important; }
+
+/* Meeting cards */
+body.rf-light .rf-meeting-title { color: #52596b; }
+body.rf-light .rf-meeting-sub { color: rgba(82,89,107,0.6); }
+body.rf-light .rf-meeting-countdown { color: #0f1117; }
+body.rf-light .rf-meeting-card { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); }
+body.rf-light .rf-meeting-card:hover { background: rgba(0,0,0,0.07); border-color: rgba(0,0,0,0.16); }
+
+/* Hamburger */
+body.rf-light .rf-hamburger { border-color: rgba(0,0,0,0.15); }
+body.rf-light .rf-hamburger span { background: #1a1d23; }
+
+/* Theme button */
+body.rf-light .rf-theme-btn { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.13) !important; color: #52596b !important; }
+body.rf-light .rf-theme-btn:hover { background: rgba(0,0,0,0.1) !important; color: #0f1117 !important; }
+
+/* ── INDEX PAGE: filter bar + week planner ── */
+body.rf-light .mobile-filterbar { background: rgba(255,255,255,0.97) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .filterbar-row { background: transparent; }
+body.rf-light .filterbar-row-2 { border-top-color: rgba(0,0,0,0.08) !important; }
+body.rf-light .mobile-brand-btn { color: #52596b; border-color: rgba(0,0,0,0.12); background: transparent; }
+body.rf-light .mobile-brand-btn:hover { color: #0f1117; border-color: rgba(0,0,0,0.2); background: rgba(0,0,0,0.04); }
+body.rf-light .mobile-brand-btn.active-lrdx { background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.35); color: #007d50; }
+body.rf-light .mobile-brand-btn.active-rr   { background: rgba(180,130,60,0.1); border-color: rgba(180,130,60,0.35); color: #8a6020; }
+body.rf-light .mobile-brand-btn.active-jdx  { background: rgba(200,50,50,0.1); border-color: rgba(200,50,50,0.35); color: #b01010; }
+body.rf-light .mobile-region-btn { color: #52596b; border-color: rgba(0,0,0,0.12); background: transparent; }
+body.rf-light .mobile-region-btn.active { background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.3); color: #007d50; }
+body.rf-light .nav-modes { background: rgba(0,0,0,0.04) !important; border-color: rgba(0,0,0,0.1) !important; }
+body.rf-light .nav-modes label { color: #52596b; }
+body.rf-light .nav-modes input:checked + label { background: #fff; color: #0f1117; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+body.rf-light #searchInput { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); color: #0f1117; }
+
+/* Week planner colours */
+body.rf-light #tempoCalendar,
+body.rf-light .tempo-inner { background: #f0f2f5; }
+body.rf-light #tpGrid > div[style*="#0d0f12"],
+body.rf-light [style*="background:#0d0f12"] { background: #e8eaed !important; }
+body.rf-light [style*="background:rgba(255,255,255,.04)"],
+body.rf-light [style*="background:rgba(255,255,255,.025)"] { border-color: rgba(0,0,0,0.07) !important; }
+body.rf-light [style*="color:#f0f0f0"],
+body.rf-light [style*="color: #f0f0f0"] { color: #0f1117 !important; }
+body.rf-light [style*="color:rgba(138,142,156,.75)"] { color: #52596b !important; }
+body.rf-light [style*="color:#00d084"][style*="font-weight:800"],
+body.rf-light [style*="color:#00d084"][style*="font-size:.82rem"] { color: #007d50 !important; }
+body.rf-light [style*="rgba(255,255,255,.08)"] { border-color: rgba(0,0,0,0.09) !important; }
+body.rf-light [style*="rgba(255,255,255,.07)"] { border-color: rgba(0,0,0,0.08) !important; }
+body.rf-light [style*="rgba(0,208,132,.018)"] { background: rgba(0,166,106,0.04) !important; }
+body.rf-light [style*="rgba(0,208,132,.05)"] { background: rgba(0,166,106,0.08) !important; }
+body.rf-light [style*="rgba(138,142,156,.65)"] { color: #8a8e9c !important; }
+body.rf-light [style*="rgba(138,142,156,.25)"] { color: rgba(82,89,107,0.35) !important; }
+body.rf-light [style*="rgba(138,142,156,.45)"] { color: rgba(82,89,107,0.55) !important; }
+
+/* Panel toggle button */
+body.rf-light .panel-toggle-btn { background: #fff; border-color: rgba(0,0,0,0.2); color: #52596b; }
+
+/* ── TRANSLATION PAGE ── */
+body.rf-light .translation-wrap { background: #fff; border-color: rgba(0,0,0,0.1); }
+body.rf-light .lang-bar { border-bottom-color: rgba(0,0,0,0.08); }
+body.rf-light .lang-select { background: #f5f7fa; border-color: rgba(0,0,0,0.12); color: #0f1117; }
+body.rf-light .mode-tabs { border-bottom-color: rgba(0,0,0,0.08); }
+body.rf-light .mode-tab { color: #52596b; }
+body.rf-light .mode-tab.active { color: #007d50; border-bottom-color: #00a66a; }
+body.rf-light .panel-textarea { color: #0f1117; }
+body.rf-light .panel-textarea.output-area { background: rgba(0,0,0,0.02); }
+body.rf-light .text-bottom-bar { border-top-color: rgba(0,0,0,0.08); background: transparent; }
+
+
+/* ─── LIGHT THEME ─── */
+body.rf-light {
+  --bg:         #f0f2f5;
+  --surface:    #ffffff;
+  --surface-2:  #e8eaed;
+  --nav:        #ffffff;
+  --card:       #ffffff;
+  --card-hov:   #f5f7fa;
+  --border:     rgba(0,0,0,0.09);
+  --border-hov: rgba(0,0,0,0.18);
+  --text:       #0f1117;
+  --text-2:     #52596b;
+  --text-3:     rgba(82,89,107,0.55);
+  color-scheme: light;
+}
+body.rf-light .rf-topnav { background: rgba(255,255,255,0.96) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-mobile-drawer { background: rgba(248,249,252,0.99) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-meeting-card { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); }
+body.rf-light .rf-meeting-card:hover { background: rgba(0,0,0,0.06); }
+body.rf-light .rf-footer { background: #e8eaed !important; border-top-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-navlink { color: #52596b; }
+body.rf-light .rf-navlink:hover { color: #0f1117; background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.09); }
+body.rf-light .rf-navlink.rf-active { color: #00a66a; background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.25); }
+body.rf-light .rf-drawer-link { color: #52596b; }
+body.rf-light .rf-drawer-link:hover { color: #0f1117; background: rgba(0,0,0,0.04); }
+body.rf-light .rf-footer-link { color: #52596b; }
+body.rf-light .rf-footer-link:hover { color: #0f1117; }
+body.rf-light .rf-footer-brand { color: rgba(82,89,107,0.4); }
+body.rf-light .rf-topnav-divider { background: rgba(0,0,0,0.09); }
+body.rf-light .rf-nav-logo .rf-logo-main { color: #0f1117 !important; }
+body.rf-light .rf-nav-logo .rf-logo-sub  { color: rgba(82,89,107,0.55) !important; }
+body.rf-light .rf-dot { color: #00a66a !important; }
+
+/* Theme toggle button */
+.rf-theme-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 6px; flex-shrink: 0;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: #8a8e9c; cursor: pointer; transition: all 0.15s;
+  font-family: inherit; padding: 0;
+}
+.rf-theme-btn:hover { background: rgba(255,255,255,0.1); color: #f5f5f5; border-color: rgba(255,255,255,0.2); }
+body.rf-light .rf-theme-btn { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); color: #52596b; }
+body.rf-light .rf-theme-btn:hover { background: rgba(0,0,0,0.1); color: #0f1117; }
+.rf-theme-btn .rf-icon-sun  { display: none; }
+.rf-theme-btn .rf-icon-moon { display: block; }
+body.rf-light .rf-theme-btn .rf-icon-sun  { display: block; }
+body.rf-light .rf-theme-btn .rf-icon-moon { display: none; }
+
+
+
+/* Back to dashboard button */
+.rf-back-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0.28rem 0.7rem; border-radius: 5px;
+  font-size: 0.66rem; font-weight: 600; letter-spacing: 0.04em;
+  color: #8a8e9c; text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+}
+.rf-back-btn:hover { color: #f5f5f5; border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); }
+body.rf-light .rf-back-btn { color: #52596b; border-color: rgba(0,0,0,0.13); background: rgba(0,0,0,0.04); }
+body.rf-light .rf-back-btn:hover { color: #0f1117; border-color: rgba(0,0,0,0.22); background: rgba(0,0,0,0.08); }
+</style>
+</head>
+<body style="display:flex; flex-direction:column; min-height:100vh; align-items:stretch;">
+
+<!-- ═══ REFFINE SHARED NAV ═══ -->
+<nav class="rf-topnav" id="rfTopNav">
+
+  <!-- Logo -->
+  <a href="index.html" class="rf-nav-logo">
+    <span class="rf-logo-main">REFFINE <span class="rf-dot">·</span> MENA HUB</span>
+    <span class="rf-logo-sub">Reffine JLR MENA Dashboard</span>
+  </a>
+  <div class="rf-topnav-divider"></div>
+
+  <!-- Desktop nav links -->
+  <div class="rf-nav-right">
+    <a href="index.html"              class="rf-navlink" data-rfpage="index">Dashboard</a>
+    <a href="translation.html"        class="rf-navlink" data-rfpage="translation">Translate</a>
+    <a href="translation-tool.html"   class="rf-navlink" data-rfpage="translation-tool">Translate Tool</a>
+    <a href="seo-tool.html"           class="rf-navlink" data-rfpage="seo-tool">SEO</a>
+    <a href="offer-generator.html"    class="rf-navlink" data-rfpage="offer-generator">Offers</a>
+    <a href="retailer-locator.html"  class="rf-navlink" data-rfpage="retailer-locator">Retailers</a>
+    <div class="rf-topnav-divider"></div>
+    <button class="rf-navlink" id="rfBtnResources">Docs</button>
+    <button class="rf-navlink" id="rfBtnEmails">Mails</button>
+  </div>
+
+  <!-- Clocks + countdowns (hidden <1200px) -->
+  <div class="rf-right-section">
+    <div class="rf-nav-clock">
+      <canvas id="rfClockDubai" width="34" height="34"></canvas>
+      <div><span class="rf-clock-city">Dubai</span><span class="rf-clock-time" id="rfClockTimeDubai">--:--</span></div>
+    </div>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+    <div class="rf-nav-clock">
+      <canvas id="rfClockWarsaw" width="34" height="34"></canvas>
+      <div><span class="rf-clock-city">Warsaw</span><span class="rf-clock-time" id="rfClockTimeWarsaw">--:--</span></div>
+    </div>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+    <div class="rf-meeting-cards">
+      <a class="rf-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d" target="_blank">
+        <div class="rf-meeting-title">Weekly Call</div>
+        <div class="rf-meeting-countdown" id="rfWeeklyCountdown">--:--</div>
+        <div class="rf-meeting-sub">Mon 1:00 PM Warsaw</div>
+      </a>
+      <a class="rf-meeting-card" id="rfDailyCardLink" href="https://meet.google.com/pgy-nkum-gic" target="_blank">
+        <div class="rf-meeting-title">Daily Call</div>
+        <div class="rf-meeting-countdown" id="rfDailyCountdown">--:--</div>
+        <div class="rf-meeting-sub">07:45 · Thu 07:30 Warsaw</div>
+      </a>
+      <a class="rf-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d" target="_blank">
+        <div class="rf-meeting-title">Offers Call</div>
+        <div class="rf-meeting-countdown" id="rfOffersCountdown">--:--</div>
+        <div class="rf-meeting-sub">Thu 8:00 AM Warsaw</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Hamburger (mobile) -->
+  <button class="rf-theme-btn" id="rfThemeBtn" style="margin-left:6px;" title="Toggle light/dark theme" aria-label="Toggle theme">
+    <svg class="rf-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="rf-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  
+  <a href="index.html" class="rf-back-btn" title="Back to Dashboard">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    Dashboard
+  </a>
+  <button class="rf-hamburger" id="rfHamburger" aria-label="Menu" style="margin-left:4px;">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile drawer -->
+<div class="rf-mobile-drawer" id="rfDrawer">
+  <a href="index.html" class="rf-drawer-link" data-rfpage="index">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+  <a href="translation.html" class="rf-drawer-link" data-rfpage="translation">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10"/></svg>Translate</a>
+  <a href="translation-tool.html" class="rf-drawer-link" data-rfpage="translation-tool">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6m-7 0 6-6 2-3M2 5h12M7 2h1m15 20-5-10-5 10M14 18h6"/></svg>Translate Tool</a>
+  <a href="seo-tool.html" class="rf-drawer-link" data-rfpage="seo-tool">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>SEO</a>
+  <a href="offer-generator.html" class="rf-drawer-link" data-rfpage="offer-generator">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Offers</a>
+  <a href="retailer-locator.html" class="rf-drawer-link" data-rfpage="retailer-locator">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Retailers</a>
+  <button class="rf-drawer-link" id="rfDrawerResources">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Docs</button>
+  <button class="rf-drawer-link" id="rfDrawerEmails">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>Mails</button>
+  <a href="login.html" class="rf-drawer-link" data-rfpage="admin" style="color:rgba(138,142,156,0.42);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Admin</a>
+</div>
+
+
+<script>
+// ═══ REFFINE SHARED NAV JS ═══
+(function(){
+  var isIndex = (location.pathname.split('/').pop()||'index.html') === 'index.html' ||
+                (location.pathname.split('/').pop()||'') === '';
+
+  // Mark active page
+  var page = (location.pathname.split('/').pop()||'index.html').replace('.html','') || 'index';
+  document.querySelectorAll('[data-rfpage]').forEach(function(el){
+    if(el.getAttribute('data-rfpage') === page) el.classList.add('rf-active');
+  });
+
+  // Resources + Emails buttons
+  function handleResourcesClick(){ if(isIndex){ showMode && showMode('important'); } else { location.href='index.html#resources'; } }
+  function handleEmailsClick()   { if(isIndex){ showMode && showMode('emails');    } else { location.href='index.html#emails';    } }
+
+  document.getElementById('rfBtnResources') && document.getElementById('rfBtnResources').addEventListener('click', handleResourcesClick);
+  document.getElementById('rfBtnEmails')    && document.getElementById('rfBtnEmails').addEventListener('click', handleEmailsClick);
+  document.getElementById('rfDrawerResources') && document.getElementById('rfDrawerResources').addEventListener('click', handleResourcesClick);
+  document.getElementById('rfDrawerEmails')    && document.getElementById('rfDrawerEmails').addEventListener('click', handleEmailsClick);
+
+  // Hamburger
+  var btn = document.getElementById('rfHamburger');
+  var drawer = document.getElementById('rfDrawer');
+  if(btn && drawer){
+    btn.addEventListener('click', function(){
+      var open = drawer.classList.toggle('open'); btn.classList.toggle('open', open);
+    });
+    document.addEventListener('click', function(e){
+      if(!btn.contains(e.target)&&!drawer.contains(e.target)){ drawer.classList.remove('open'); btn.classList.remove('open'); }
+    });
+  }
+
+  // Clocks
+  function getTimeIn(tz){
+    try { return new Date(new Date().toLocaleString('en-US',{timeZone:tz,hour12:false,year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'})); }
+    catch(e){ return new Date(); }
+  }
+  function drawClock(id,tz,textId){
+    var c=document.getElementById(id); if(!c)return;
+    var ctx=c.getContext('2d'),W=c.width,CX=W/2,CY=W/2,R=W/2-1;
+    ctx.clearRect(0,0,W,W);
+    var t=getTimeIn(tz),sec=t.getSeconds(),min=t.getMinutes(),hr=t.getHours()%12,ms=t.getMilliseconds();
+    ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fillStyle='#1c1f28';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
+    for(var i=0;i<12;i++){var a=(i/12)*Math.PI*2-Math.PI/2;ctx.beginPath();ctx.moveTo(CX+Math.cos(a)*(R-2),CY+Math.sin(a)*(R-2));ctx.lineTo(CX+Math.cos(a)*(R-5),CY+Math.sin(a)*(R-5));ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
+    ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(((hr+min/60)/12)*Math.PI*2-Math.PI/2)*(R*0.45),CY+Math.sin(((hr+min/60)/12)*Math.PI*2-Math.PI/2)*(R*0.45));ctx.strokeStyle='#eceef2';ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(((min+sec/60)/60)*Math.PI*2-Math.PI/2)*(R*0.62),CY+Math.sin(((min+sec/60)/60)*Math.PI*2-Math.PI/2)*(R*0.62));ctx.strokeStyle='rgba(236,238,242,0.75)';ctx.lineWidth=1.5;ctx.stroke();
+    var sA=((sec+ms/1000)/60)*Math.PI*2-Math.PI/2;
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(sA)*(R*0.7),CY+Math.sin(sA)*(R*0.7));ctx.strokeStyle='#00d084';ctx.lineWidth=1;ctx.shadowColor='#00d084';ctx.shadowBlur=3;ctx.stroke();ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(CX,CY,2,0,Math.PI*2);ctx.fillStyle='#eceef2';ctx.fill();
+    var el=document.getElementById(textId);
+    if(el) el.textContent=String(t.getHours()).padStart(2,'0')+':'+String(min).padStart(2,'0');
+  }
+  function tick(){ drawClock('rfClockDubai','Asia/Dubai','rfClockTimeDubai'); drawClock('rfClockWarsaw','Europe/Warsaw','rfClockTimeWarsaw'); requestAnimationFrame(tick); }
+  tick();
+
+  // Countdown (Date.UTC based — timezone-safe)
+  function runCountdowns(){
+    var nowMs=Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    function until(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cU=cW-off;
+        if(dow!==null&&new Date(cW).getUTCDay()!==dow) continue;
+        if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function untilDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dW).getUTCDay()===4;
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cU=cW-off; if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function fmt(ms){
+      if(ms<=0) return 'NOW';
+      var s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sc=s%60;
+      function p(n){return String(n).padStart(2,'0');}
+      return d>0 ? d+'d:'+p(h)+'h:'+p(m)+'m' : p(h)+'h:'+p(m)+'m:'+p(sc)+'s';
+    }
+    function set(id,ms){
+      var el=document.getElementById(id); if(!el) return;
+      var t=fmt(ms); el.textContent=t;
+      el.className='rf-meeting-countdown'+(t==='NOW'?' now':ms<30*60*1000?' soon':'');
+    }
+    set('rfWeeklyCountdown', until(13,0,1));
+    set('rfDailyCountdown',  untilDaily());
+    set('rfOffersCountdown', until(8,0,4));
+  }
+  runCountdowns();
+  setInterval(runCountdowns,1000);
+
+})();
+/* ─── MEETING NOTIFICATIONS ─── */
+(function(){
+  var DAILY_NORMAL = 'https://meet.google.com/pgy-nkum-gic';
+  var DAILY_THU    = 'https://meet.google.com/hxe-gzax-sre';
+
+  /* Update daily card href based on whether next daily is Thu or not */
+  function updateDailyLink(){
+    var nowMs = Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    var isThu=false;
+    for(var i=0;i<=7;i++){
+      var b=new Date(wNowMs);
+      var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+      var cThu=new Date(dW).getUTCDay()===4;
+      var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,cThu?30:45,0);
+      var cU=cW-off;
+      if(cU>nowMs){ isThu=cThu; break; }
+    }
+    var link=isThu?DAILY_THU:DAILY_NORMAL;
+    var cards=document.querySelectorAll('#rfDailyCardLink, #rfDailyMobileCard');
+    cards.forEach(function(el){ el.href=link; });
+  }
+  updateDailyLink();
+  setInterval(updateDailyLink, 60000);
+
+  /* ── Browser Notifications: 1-minute warning before each call ── */
+  var _notified = {};
+
+  var CALLS = [
+    { id:'weekly', name:'Weekly Call',  link:'https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d' },
+    { id:'daily',  name:'Daily Call',   link:null },  // link resolved dynamically
+    { id:'offers', name:'Offers Call',  link:'https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d' },
+  ];
+
+  function requestPermission(){
+    if(!('Notification' in window)) return;
+    if(Notification.permission==='default'){
+      Notification.requestPermission();
+    }
+  }
+  /* Ask for permission on first user interaction */
+  document.addEventListener('click', requestPermission, {once:true});
+
+  function getMsUntilCall(callId){
+    var nowMs=Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    function until(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cU=cW-off;
+        if(dow!==null&&new Date(cW).getUTCDay()!==dow) continue;
+        if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function untilDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dW).getUTCDay()===4;
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cU=cW-off; if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    if(callId==='weekly') return until(13,0,1);
+    if(callId==='daily')  return untilDaily();
+    if(callId==='offers') return until(8,0,4);
+    return 86400000;
+  }
+
+  function getDailyLink(){
+    var el=document.getElementById('rfDailyCardLink');
+    return el ? el.href : DAILY_NORMAL;
+  }
+
+  function fireNotification(call){
+    if(!('Notification' in window)||Notification.permission!=='granted') return;
+    var link=call.id==='daily'?getDailyLink():call.link;
+    var n=new Notification('📞 '+call.name+' starts in 1 minute', {
+      body: 'Click to join the call now',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%2300d084"/><text x="16" y="21" text-anchor="middle" font-size="16">📞</text></svg>',
+      requireInteraction: false,
+      tag: call.id
+    });
+    n.onclick=function(){ window.open(link,'_blank'); n.close(); };
+    setTimeout(function(){ n.close(); }, 15000);
+  }
+
+  function checkNotifications(){
+    var nowMs=Date.now();
+    /* Build a key based on current date+hour so notification fires once per occurrence */
+    var dayKey = new Date(nowMs).toISOString().slice(0,13);
+    CALLS.forEach(function(call){
+      var ms=getMsUntilCall(call.id);
+      var key=call.id+':'+dayKey;
+      /* Fire when 55–65 seconds remain (window to catch the 1-min mark) */
+      if(ms>55000&&ms<=65000&&!_notified[key]){
+        _notified[key]=true;
+        fireNotification(call);
+      }
+      /* Clean up old keys to avoid memory leak */
+      if(ms>120000) delete _notified[call.id+':'+new Date(nowMs-3600000).toISOString().slice(0,13)];
+    });
+  }
+
+  setInterval(checkNotifications, 5000);
+})();
+
+/* ─── THEME TOGGLE ─── */
+(function(){
+  var STORE = 'rf_theme';
+  function applyTheme(t){ document.body.classList.toggle('rf-light', t==='light'); try{ localStorage.setItem(STORE, t); }catch(e){} }
+  try{ var saved = localStorage.getItem(STORE) || 'dark'; } catch(e){ var saved = 'dark'; }
+  applyTheme(saved);
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('rfThemeBtn');
+    if(btn){ btn.addEventListener('click', function(){
+      applyTheme(document.body.classList.contains('rf-light') ? 'dark' : 'light');
+    }); }
+  });
+})();
+
+</script>
+
+
+<script>
+// ═══ SHARED CLOCK + COUNTDOWN (injected on all pages) ═══
+(function(){
+
+function getTimeIn(tz){
+  try {
+    return new Date(new Date().toLocaleString('en-US',{timeZone:tz,hour12:false,
+      year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'}));
+  } catch(e){ return new Date(); }
+}
+
+function drawSmallClock(canvasId,tz,textId){
+  var canvas=document.getElementById(canvasId); if(!canvas) return;
+  var ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,CX=W/2,CY=H/2,R=W/2-1;
+  ctx.clearRect(0,0,W,H);
+  var now=getTimeIn(tz),sec=now.getSeconds(),min=now.getMinutes(),hr=now.getHours()%12,ms=now.getMilliseconds();
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fillStyle='#1c1f28';ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
+  for(var i=0;i<12;i++){var a=(i/12)*Math.PI*2-Math.PI/2;ctx.beginPath();ctx.moveTo(CX+Math.cos(a)*(R-2.5),CY+Math.sin(a)*(R-2.5));ctx.lineTo(CX+Math.cos(a)*(R-5),CY+Math.sin(a)*(R-5));ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
+  ctx.lineCap='round';
+  var hA=((hr+min/60)/12)*Math.PI*2-Math.PI/2;
+  ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(hA)*(R*0.45),CY+Math.sin(hA)*(R*0.45));ctx.strokeStyle='#eceef2';ctx.lineWidth=2;ctx.stroke();
+  var mA=((min+sec/60)/60)*Math.PI*2-Math.PI/2;
+  ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(mA)*(R*0.65),CY+Math.sin(mA)*(R*0.65));ctx.strokeStyle='rgba(236,238,242,0.75)';ctx.lineWidth=1.5;ctx.stroke();
+  var sA=((sec+ms/1000)/60)*Math.PI*2-Math.PI/2;
+  ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(sA)*(R*0.72),CY+Math.sin(sA)*(R*0.72));ctx.strokeStyle='#00d084';ctx.lineWidth=1;ctx.shadowColor='#00d084';ctx.shadowBlur=4;ctx.stroke();ctx.shadowBlur=0;
+  ctx.beginPath();ctx.arc(CX,CY,2,0,Math.PI*2);ctx.fillStyle='#eceef2';ctx.fill();
+  var el=document.getElementById(textId);
+  if(el) el.textContent=String(now.getHours()).padStart(2,'0')+':'+String(min).padStart(2,'0');
+}
+
+function tickClocks(){ drawSmallClock('clockDubai','Asia/Dubai','clockTimeDubai'); drawSmallClock('clockWarsaw','Europe/Warsaw','clockTimeWarsaw'); requestAnimationFrame(tickClocks); }
+tickClocks();
+
+  function updateCountdowns(){
+    var nowMs = Date.now();
+    function warsawOffsetMs(){
+      var d=new Date(nowMs);
+      var s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/);
+      if(!m) return 3600000;
+      var h=parseInt(m[4]); if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6]) - nowMs;
+    }
+    var offMs=warsawOffsetMs();
+    var wNowMs=nowMs+offMs;
+    function msUntil(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cWMs=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cUTC=cWMs-offMs;
+        if(dow!==null&&new Date(cWMs).getUTCDay()!==dow) continue;
+        if(cUTC>nowMs) return cUTC-nowMs;
+      }
+      return 86400000;
+    }
+    function msDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dWMs=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dWMs).getUTCDay()===4;
+        var cWMs=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cUTC=cWMs-offMs;
+        if(cUTC>nowMs) return cUTC-nowMs;
+      }
+      return 86400000;
+    }
+    function fmt(ms){
+      if(ms<=0) return 'NOW';
+      var s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sc=s%60;
+      function p(n){return String(n).padStart(2,'0');}
+      if(d>0) return d+'d : '+p(h)+'h : '+p(m)+'m';
+      return p(h)+'h : '+p(m)+'m : '+p(sc)+'s';
+    }
+    function apply(ms,id,cls){
+      var el=document.getElementById(id); if(!el) return;
+      var t=fmt(ms); el.textContent=t;
+      el.className=cls+(t==='NOW'?' now':ms<30*60*1000?' soon':'');
+      var card=el.closest?el.closest('.meeting-card'):null;
+      if(card) card.classList.toggle('active-meeting',t==='NOW');
+    }
+    apply(msUntil(13,0,1),'weeklyCountdown','meeting-card-countdown');
+    apply(msDaily(),'dailyCountdown','meeting-card-countdown');
+    apply(msUntil(8,0,4),'offersCountdown','meeting-card-countdown');
+  }
+  updateCountdowns();
+  setInterval(updateCountdowns,1000);
+
+})();
+</script>
+
+
+
+
+    <div class="tt-page">
+    <div class="tt-container">
+        <div class="tt-page-header"><div class="tt-page-title">Excel <span>Translation</span> Tool</div><div class="tt-page-sub">Reffine MENA · Phrase &amp; SpecsValue translator</div></div>
+        <div class="tt-tools-grid">
+        
+        <div id="tool-1" class="tool-section">
+            <button id="clearBtn1" title="Clear form" class="clear-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+            <div class="tool-title-row">
+                <span class="tool-number">01</span>
+                <h2 class="tool-title">Phrase Sheet Translator</h2>
+                <button id="infoBtn1" class="info-btn"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </button>
+            </div>
+            <!-- 3-col equal grid -->
+            <div class="three-col-grid">
+
+                <!-- COL 1: File to translate -->
+                <div class="col-box">
+                    <div class="tt-label">File to translate</div>
+                    <label for="fileToTranslate1" class="file-drop-zone col-drop">
+                        <div id="fileToTranslateDropzone1" style="width:100%;text-align:center;">
+                            <svg width="28" height="28" style="margin:0 auto 6px;display:block;color:var(--text-3)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                            <p class="drop-text">Click or drag file</p>
+                        </div>
+                    </label>
+                    <input type="file" id="fileToTranslate1" class="hidden" accept=".xlsx, .xls">
+                    <div id="fileToTranslateError1" style="font-size:0.62rem;color:var(--danger);min-height:16px;margin-top:4px;"></div>
+                </div>
+
+                <!-- COL 2: From Drive -->
+                <div class="col-box">
+                    <div class="tt-label" style="display:flex;align-items:center;gap:5px;"><svg width="14" height="14" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg> From Drive</div>
+                    <div class="col-drop" style="display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;">
+                        <select id="driveSelect1" class="drive-select">
+                            <option value="">— Select language —</option>
+                        </select>
+                        <button id="driveLoadBtn1" class="drive-load-btn" disabled>
+                            <span id="driveLoadBtnText1">Load from Drive</span>
+                        </button>
+                        <div id="driveStatus1" class="drive-status"></div>
+                    </div>
+                </div>
+
+                <!-- COL 3: Upload manually -->
+                <div class="col-box">
+                    <div class="tt-label">Upload manually</div>
+                    <label for="dbFiles1" class="file-drop-zone col-drop">
+                        <svg width="22" height="22" style="margin:0 auto 6px;display:block;color:var(--text-3)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" /></svg>
+                        <p class="drop-text">Click or drag files</p>
+                    </label>
+                    <input type="file" id="dbFiles1" class="hidden" accept=".xlsx, .xls" multiple>
+                    <div id="dbFilesList1" style="margin-top:6px;display:flex;flex-direction:column;gap:3px;"></div>
+                </div>
+
+            </div>
+                        <button id="processBtn1" disabled class="process-btn">
+                    <span id="btnText1">Translate</span>
+                </button>
+            <div id="messageArea1" class="message-area text-center mt-4 text-sm min-h-[20px]"></div>
+        </div>
+
+        <div id="tool-2" class="tool-section">
+            <button id="clearBtn2" title="Clear form" class="clear-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+            <div class="tool-title-row">
+                <span class="tool-number">02</span>
+                <h2 class="tool-title">SpecsValue Sheet Translator</h2>
+                <button id="infoBtn2" class="info-btn"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </button>
+            </div>
+            <!-- 3-col equal grid -->
+            <div class="three-col-grid">
+
+                <!-- COL 1: File to translate -->
+                <div class="col-box">
+                    <div class="tt-label">File to translate</div>
+                    <label for="fileToTranslate2" class="file-drop-zone col-drop">
+                        <div id="fileToTranslateDropzone2" style="width:100%;text-align:center;">
+                            <svg width="28" height="28" style="margin:0 auto 6px;display:block;color:var(--text-3)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z" /></svg>
+                            <p class="drop-text">Click or drag file</p>
+                        </div>
+                    </label>
+                    <input type="file" id="fileToTranslate2" class="hidden" accept=".xlsx, .xls">
+                    <div id="fileToTranslateError2" style="font-size:0.62rem;color:var(--danger);min-height:16px;margin-top:4px;"></div>
+                </div>
+
+                <!-- COL 2: From Drive -->
+                <div class="col-box">
+                    <div class="tt-label" style="display:flex;align-items:center;gap:5px;"><svg width="14" height="14" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg> From Drive</div>
+                    <div class="col-drop" style="display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;">
+                        <select id="driveSelect2" class="drive-select">
+                            <option value="">— Select language —</option>
+                        </select>
+                        <button id="driveLoadBtn2" class="drive-load-btn" disabled>
+                            <span id="driveLoadBtnText2">Load from Drive</span>
+                        </button>
+                        <div id="driveStatus2" class="drive-status"></div>
+                    </div>
+                </div>
+
+                <!-- COL 3: Upload manually -->
+                <div class="col-box">
+                    <div class="tt-label">Upload manually</div>
+                    <label for="dbFiles2" class="file-drop-zone col-drop">
+                        <svg width="22" height="22" style="margin:0 auto 6px;display:block;color:var(--text-3)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" /></svg>
+                        <p class="drop-text">Click or drag files</p>
+                    </label>
+                    <input type="file" id="dbFiles2" class="hidden" accept=".xlsx, .xls" multiple>
+                    <div id="dbFilesList2" style="margin-top:6px;display:flex;flex-direction:column;gap:3px;"></div>
+                </div>
+
+            </div>
+                        <button id="processBtn2" disabled class="process-btn">
+                    <span id="btnText2">Translate</span>
+                </button>
+            <div id="messageArea2" class="message-area text-center mt-4 text-sm min-h-[20px]"></div>
+        </div>
+        </div><!-- /tt-tools-grid -->
+    </div><!-- /tt-container -->
+    </div><!-- /tt-page -->
+
+    <!-- Modal 1 -->
+    <div id="infoModal1" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="modal-content">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h3 class="">How the Phrase Sheet Translator works</h3>
+                <button id="closeModal1" class="modal-close-btn">&times;</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <div>
+                    <h4 class="">How does it work?</h4>
+                    <p>The tool automatically finds and translates all sheets with the correct structure. A sheet is valid if it contains these headers:</p>
+                    <ul class="list-disc list-inside">
+                        <li>Cell <strong>A2</strong>: "Key"</li>
+                        <li>Cell <strong>B2</strong>: "Original phrase"</li>
+                        <li>Cell <strong>C2</strong>: "Translation"</li>
+                    </ul>
+                     <p class="mt-2">In matching sheets, values from column <strong>B</strong> are translated using the database and written to column <strong>C</strong>. Search is <strong>case-insensitive</strong>.</p>
+                </div>
+                <div>
+                    <h4 class="">File format</h4>
+                    <ul class="list-disc list-inside">
+                        <li><strong>File to translate:</strong> Must contain at least one sheet with the header structure described above.</li>
+                        <li><strong>Translation database file:</strong> <strong>Column A</strong> should contain the source text (e.g. English), and <strong>column B</strong> its translation.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2 -->
+    <div id="infoModal2" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="modal-content">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h3 class="">How the SpecsValue Translator works</h3>
+                <button id="closeModal2" class="modal-close-btn">&times;</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <div>
+                    <h4 class="">How does it work?</h4>
+                    <p>This tool has complex multi-step logic depending on the value in column B:</p>
+                    <ul class="list-disc list-inside mt-2">
+                        <li><strong>When col. B is "features" or "full_features":</strong> Translates text found between tags <code class="">&gt;</code> oraz <code class="">&lt;</code>. Search is <strong>case-sensitive</strong>. Missing phrases are reported.</li>
+                        <li><strong>When col. B is "transmission":</strong> Only translates the word "Automatic" (case-insensitive).</li>
+                        <li><strong>In all other rows:</strong> Translates a list of special phrases (<code class="">air suspension</code>, <code class="">coil suspension</code>, <code class="">seats</code>, <code class="">seat</code>, <code class="">air</code>, <code class="">coil</code>), ensuring longer phrases are translated before shorter ones to avoid errors.</li>
+                    </ul>
+                </div>
+                 <div>
+                    <h4 class="">File format</h4>
+                    <ul class="list-disc list-inside">
+                        <li><strong>File to translate:</strong> Must contain a sheet named <code class="">SpecsValue</code>.</li>
+                        <li><strong>Translation database file:</strong> <strong>Column A</strong> should contain the source text (e.g. English), and <strong>column B</strong> its translation.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- UTILITY FUNCTIONS (SHARED) ---
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error(`Error reading file: ${file.name}`));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function setupDragDrop(input, label) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                label.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+            label.addEventListener('dragenter', () => label.classList.add('dragover'));
+            label.addEventListener('dragover', () => label.classList.add('dragover'));
+            label.addEventListener('dragleave', () => label.classList.remove('dragover'));
+            label.addEventListener('drop', () => label.classList.remove('dragover'));
+
+            label.addEventListener('drop', (e) => {
+                const files = e.dataTransfer?.files;
+                if (!files || files.length === 0) return;
+
+                // Ustaw input.files przez DataTransfer (bardziej kompatybilne niż bezpośrednie przypisanie FileList).
+                try {
+                    const dt = new DataTransfer();
+                    for (const f of files) dt.items.add(f);
+                    input.files = dt.files;
+                } catch (err) {
+                    // Fallback: jeśli browser blokuje ustawienie input.files, to i tak odpalimy change –
+                    // a logika w handlerze będzie działała dla wyboru pliku z dialogu.
+                    console.warn('Nie udało się ustawić input.files z dropu:', err);
+                }
+
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        }
+
+        async function processUploadedFiles(files, map, caseInsensitive) {
+            for (const file of files) {
+                try {
+                    const fileContent = await readFile(file.file); // Use file.file from the state object
+                    const workbook = XLSX.read(fileContent, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    if (!worksheet) {
+                         throw new Error(`File "${file.name}" is empty or contains no sheets.`);
+                    }
+                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    for (const row of json) {
+                        if (row[0] && row[1]) {
+                            let key = String(row[0]).trim();
+                            if (caseInsensitive) {
+                                key = key.toLowerCase();
+                            }
+                            map.set(key, String(row[1]));
+                        }
+                    }
+                } catch (error) {
+                    throw new Error(`Failed to process database file "${file.name}": ${error.message}`);
+                }
+            }
+        }
+        
+        function downloadWorkbook(workbook, originalFileName) {
+            const outputWorkbook = XLSX.write(workbook, { bookType: 'xlsx', type: 'array', cellStyles: true });
+            const blob = new Blob([outputWorkbook], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `przetlumaczony_${originalFileName}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function setupModal(modalId, openBtnId, closeBtnId) {
+            const modal = document.getElementById(modalId);
+            const openBtn = document.getElementById(openBtnId);
+            const closeBtn = document.getElementById(closeBtnId);
+            
+            const open = () => modal.classList.add('is-open');
+            const close = () => modal.classList.remove('is-open');
+
+            openBtn.addEventListener('click', open);
+            closeBtn.addEventListener('click', close);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) close();
+            });
+        }
+
+        setupModal('infoModal1', 'infoBtn1', 'closeModal1');
+        setupModal('infoModal2', 'infoBtn2', 'closeModal2');
+
+        /**
+         * Main setup function for a translator tool instance.
+         * @param {number} toolNumber - The number of the tool (1 or 2).
+         * @param {function} validateMainFile - Async function to validate the main file.
+         * @param {function} processAction - Async function to run when the process button is clicked.
+         */
+        function setupTool(toolNumber, validateMainFile, processAction) {
+            const ui = {
+                toolSection: document.getElementById(`tool-${toolNumber}`),
+                fileInput: document.getElementById(`fileToTranslate${toolNumber}`),
+                dbInput: document.getElementById(`dbFiles${toolNumber}`),
+                dropzone: document.getElementById(`fileToTranslateDropzone${toolNumber}`),
+                dropzoneLabel: document.querySelector(`label[for="fileToTranslate${toolNumber}"]`),
+                errorContainer: document.getElementById(`fileToTranslateError${toolNumber}`),
+                dbDropLabel: document.querySelector(`label[for="dbFiles${toolNumber}"]`),
+                dbFilesList: document.getElementById(`dbFilesList${toolNumber}`),
+                processBtn: document.getElementById(`processBtn${toolNumber}`),
+                btnText: document.getElementById(`btnText${toolNumber}`),
+                messageArea: document.getElementById(`messageArea${toolNumber}`),
+                clearBtn: document.getElementById(`clearBtn${toolNumber}`),
+            };
+
+            let mainFile = null; // State: { file, name, valid, error }
+            let dbFiles = [];   // State: [{ file, name, id }]
+
+            const checkCanProcess = () => {
+                ui.processBtn.disabled = !(mainFile && mainFile.valid && dbFiles.length > 0);
+            };
+
+            const renderMainFile = () => {
+                ui.dropzone.innerHTML = '';
+                ui.errorContainer.textContent = '';
+                if (mainFile) {
+                    const isValid = mainFile.valid;
+                    const iconColor = isValid ? 'text-green-500' : 'text-red-500';
+                    const iconPath = isValid 
+                        ? 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' 
+                        : 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z';
+                    
+                    const fileDisplay = `
+                        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;font-size:0.7rem;color:${isValid ? 'var(--text)' : 'var(--danger)'};">
+                            <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                                <svg class="w-5 h-5 ${iconColor} flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="${iconPath}" /></svg>
+                                <span class="truncate" title="${mainFile.name}">${mainFile.name}</span>
+                            </div>
+                            <button data-file-id="main" class="remove-file-btn" style="background:none;border:none;color:var(--text-3);cursor:pointer;padding:2px;flex-shrink:0;">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>`;
+                    ui.dropzone.innerHTML = fileDisplay;
+                    if (mainFile.error) {
+                        ui.errorContainer.textContent = mainFile.error;
+                    }
+                } else {
+                     ui.dropzone.innerHTML = `
+                        <svg width="28" height="28" style="margin:0 auto 6px;display:block;color:var(--text-3)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                        <p class="drop-text">Click or drag file</p>`;
+                }
+                checkCanProcess();
+            };
+
+            const renderDbFiles = () => {
+                ui.dbFilesList.innerHTML = '';
+                dbFiles.forEach(file => {
+                    const item = document.createElement('div');
+                    item.className = 'file-list-item';
+                    item.innerHTML = `
+                        <span style="font-size:0.68rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;" title="${file.name}">${file.name}</span>
+                        <button data-file-id="${file.id}" class="remove-file-btn" style="background:none;border:none;color:var(--text-3);cursor:pointer;padding:2px;flex-shrink:0;">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>`;
+                    ui.dbFilesList.appendChild(item);
+                });
+                checkCanProcess();
+            };
+
+            ui.fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                mainFile = { file, name: file.name, valid: false, error: 'Validating...' };
+                renderMainFile();
+                const validationResult = await validateMainFile(file);
+                mainFile.valid = validationResult.valid;
+                mainFile.error = validationResult.error;
+                renderMainFile();
+            });
+
+            ui.dbInput.addEventListener('change', (e) => {
+                for (const file of e.target.files) {
+                    if (!dbFiles.some(f => f.name === file.name)) {
+                        dbFiles.push({ file, name: file.name, id: crypto.randomUUID() });
+                    }
+                }
+                renderDbFiles();
+            });
+            
+            ui.toolSection.addEventListener('click', (e) => {
+                const button = e.target.closest('.remove-file-btn');
+                if (!button) return;
+
+                e.preventDefault(); // Stop the click from triggering the label
+                e.stopPropagation();
+
+                const fileId = button.dataset.fileId;
+                if (fileId === 'main') {
+                    mainFile = null;
+                    ui.fileInput.value = ''; // Reset input
+                    renderMainFile();
+                } else {
+                    dbFiles = dbFiles.filter(f => f.id !== fileId);
+                    // To remove from the FileList, we have to re-create it
+                    const dataTransfer = new DataTransfer();
+                    dbFiles.forEach(f => dataTransfer.items.add(f.file));
+                    ui.dbInput.files = dataTransfer.files;
+                    renderDbFiles();
+                }
+            });
+
+            const clearForm = (keepMessage = false) => {
+                mainFile = null;
+                dbFiles = [];
+                ui.fileInput.value = '';
+                ui.dbInput.value = '';
+                renderMainFile();
+                renderDbFiles();
+                if (!keepMessage) ui.messageArea.classList.remove('show');
+                checkCanProcess();
+            };
+            
+            const setLoading = (isLoading) => {
+                ui.btnText.textContent = isLoading ? 'Processing...' : 'Translate';
+                if (isLoading) {
+                    ui.processBtn.disabled = true;
+                }
+                // On completion, let checkCanProcess decide the button state
+                // This will be called in the finally block
+            };
+            
+            const showMessage = (text, type, missingItems = null, missingTitle = null) => {
+                let mainMessage = `<p>${text}</p>`;
+                const colors = { error: 'text-red-600', success: 'text-green-600', info: 'text-slate-500' };
+                ui.messageArea.className = `message-area text-center mt-4 text-sm min-h-[20px] ${colors[type] || 'text-slate-500'}`;
+
+                if (missingItems && missingItems.size > 0) {
+                    const title = missingTitle || "Untranslated fragments (from features):";
+                    let listHtml = `<div class="missing-list">`;
+                    listHtml += `<p class="">${title}</p><ul class="list-disc list-inside space-y-1">`;
+                    missingItems.forEach(item => {
+                        const escapedItem = String(item).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        listHtml += `<li class="">${escapedItem}</li>`;
+                    });
+                    listHtml += '</ul></div>';
+                    ui.messageArea.innerHTML = mainMessage + listHtml;
+                } else {
+                    ui.messageArea.innerHTML = mainMessage;
+                }
+                setTimeout(() => ui.messageArea.classList.add('show'), 10);
+            };
+
+            ui.processBtn.addEventListener('click', async () => {
+                setLoading(true);
+                ui.messageArea.classList.remove('show');
+                try {
+                    const result = await processAction(mainFile.file, dbFiles);
+                    showMessage(result.message, 'success', result.missing, result.missingTitle);
+                    clearForm(true);
+                } catch (error) {
+                    console.error(`Error in Translator ${toolNumber}:`, error);
+                    showMessage(`<strong>Error:</strong> ${error.message}`, 'error');
+                } finally {
+                    setLoading(false);
+                    checkCanProcess(); // Re-evaluate button state after process finishes
+                }
+            });
+
+            ui.clearBtn.addEventListener('click', () => clearForm(false));
+            setupDragDrop(ui.fileInput, ui.dropzoneLabel);
+            setupDragDrop(ui.dbInput, ui.dbDropLabel);
+        }
+
+
+        // ── Google Drive translation database files ──
+        const DRIVE_DB_FILES = [
+            { label: 'AR — Arabic',      id: '1Le2TYhokWsFsQZuRL5PwpJ99pSUJLgko', name: 'AR_TRANSLATIONS_MERGED.xlsx' },
+            { label: 'FR — French',      id: '1U2jjW868uMKAamzi-lIXOObO48f-_cJL', name: 'FR_TRANSLATIONS_MERGED.xlsx' },
+            { label: 'RU — Russian',     id: '10k33uhGW3KE6vPBYaohdgY-D6PBkb4-i', name: 'RU_TRANSLATIONS_MERGED.xlsx' },
+            { label: 'KZ — Kazakh',      id: '1dVuvEZn3HkCWhkm1vbFJGr6j8PDZjKll', name: 'KZ_TRANSLATIONS_MERGED.xlsx' },
+            { label: 'KU — Kurdish',     id: '1GvyQWVIdVwRfo1A1ZQEIVivChspnhDCX', name: 'KU_TRANSLATIONS_MERGED.xlsx' },
+            { label: 'GE — Georgian',    id: '1CNXyT0CengA8xMsVLEJtADkGny_icMTV', name: 'GE_TRANSLATIONS_MERGED.xlsx' },
+            { label: 'AZ — Azerbaijani', id: '1kqcgYcdT_yhtty7KnyhUCEPzU30zyOct', name: 'AZ_TRANSLATIONS_MERGED.xlsx' },
+            { label: 'AM — Armenian',    id: '1GLikWLAVsBxO26W7lCXr9FLLSqG-ezBh', name: 'AM_TRANSLATIONS_MERGED.xlsx' },
+        ];
+
+        async function fetchDriveFile(fileId, fileName) {
+            // Use export URL to download as xlsx
+            const url = `https://docs.google.com/spreadsheets/d/${fileId}/export?format=xlsx`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Failed to download ${fileName} (HTTP ${res.status})`);
+            const blob = await res.blob();
+            return new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        }
+
+        // ── Setup Drive dropdown + load button for a tool ──
+        function setupDrive(toolNumber, addDbFileCallback) {
+            const sel = document.getElementById(`driveSelect${toolNumber}`);
+            const btn = document.getElementById(`driveLoadBtn${toolNumber}`);
+            const status = document.getElementById(`driveStatus${toolNumber}`);
+
+            // Populate dropdown
+            DRIVE_DB_FILES.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.textContent = f.label;
+                opt.dataset.name = f.name;
+                sel.appendChild(opt);
+            });
+
+            sel.addEventListener('change', () => {
+                btn.disabled = !sel.value;
+            });
+
+            btn.addEventListener('click', async () => {
+                if (!sel.value) return;
+                const selected = DRIVE_DB_FILES.find(f => f.id === sel.value);
+                if (!selected) return;
+                btn.disabled = true;
+                const btnText = document.getElementById(`driveLoadBtnText${toolNumber}`);
+                btnText.textContent = 'Downloading…';
+                status.textContent = '';
+                try {
+                    const file = await fetchDriveFile(selected.id, selected.name);
+                    addDbFileCallback(file);
+                    status.textContent = `✓ ${selected.name} loaded`;
+                    status.className = 'drive-status ok';
+                    sel.value = '';
+                    btn.disabled = true;
+                } catch (err) {
+                    status.textContent = `✗ ${err.message}`;
+                    status.className = 'drive-status err';
+                    btn.disabled = false;
+                } finally {
+                    btnText.textContent = 'Load from Drive';
+                }
+            });
+        }
+
+        // --- TOOL 1 LOGIC ---
+        async function validatePhrasesFile(file) {
+            try {
+                const data = await readFile(file);
+                const workbook = XLSX.read(data, {type: 'array'});
+                let foundSheet = false;
+                for (const sheetName of workbook.SheetNames) {
+                    const ws = workbook.Sheets[sheetName];
+                    if (!ws) continue;
+                    const hA2 = ws['A2'] ? String(ws['A2'].v).trim() : '';
+                    const hB2 = ws['B2'] ? String(ws['B2'].v).trim() : '';
+                    const hC2 = ws['C2'] ? String(ws['C2'].v).trim() : '';
+                    if (hA2 === 'Key' && hB2 === 'Original phrase' && hC2 === 'Translation') {
+                        foundSheet = true;
+                        break;
+                    }
+                }
+                return foundSheet
+                    ? { valid: true, error: null }
+                    : { valid: false, error: 'File does not contain sheets with the required headers.' };
+            } catch (e) {
+                return { valid: false, error: `Error reading file.` };
+            }
+        }
+
+        // =========================
+        // === TOOL 1 IMPROVEMENTS ==
+        // =========================
+
+        function decodeHtmlEntities(str) {
+            const s = String(str ?? "");
+            if (!s.includes("&")) return s;
+            const ta = document.createElement("textarea");
+            ta.innerHTML = s;
+            return ta.value;
+        }
+
+        function stripZeroWidth(str) {
+            return String(str ?? "").replace(/[\u200B-\u200D\uFEFF]/g, "");
+        }
+
+        function normalizeTypography(str) {
+            let s = String(str ?? "");
+            s = s.replace(/[„”]/g, '"').replace(/[‘’]/g, "'");
+            s = s.replace(/[–—]/g, "-");
+            return s;
+        }
+
+        function normalizeBasic(str) {
+            let s = String(str ?? "");
+            s = s.replace(/&nbsp;|&#160;/gi, " ");
+            s = stripZeroWidth(s);
+            s = normalizeTypography(s);
+            s = s.replace(/\u00A0/g, " ");
+            s = s.replace(/[\s\u00A0]+/g, " ").trim();
+            return s;
+        }
+
+        function normalizeDecoded(str) {
+            let s = String(str ?? "");
+            s = s.replace(/&nbsp;|&#160;/gi, " ");
+            s = decodeHtmlEntities(s);
+            s = stripZeroWidth(s);
+            s = normalizeTypography(s);
+            s = s.replace(/\u00A0/g, " ");
+            s = s.replace(/[\s\u00A0]+/g, " ").trim();
+            return s;
+        }
+
+        function extractWhitespaceEdges(raw) {
+            const s = String(raw ?? "");
+            const m1 = s.match(/^\s+/);
+            const m2 = s.match(/\s+$/);
+            return { prefix: m1 ? m1[0] : "", suffix: m2 ? m2[0] : "" };
+        }
+
+        function looksLikeHtml(str) {
+            const s = String(str ?? "");
+            if (!s.includes("<") || !s.includes(">")) return false;
+
+            // bardziej konserwatywnie: znane tagi lub zamknięcie
+            const tagNames = "(a|p|br|span|div|b|strong|i|em|ul|ol|li|table|tr|td|th|thead|tbody|footer|header|section|article|h1|h2|h3|h4|h5|h6|img)";
+            const hasKnownOpen = new RegExp(`<\\s*${tagNames}(\\s|>|/)`, "i").test(s);
+            const hasClose = /<\/\s*[a-z][a-z0-9]*\s*>/i.test(s);
+            return hasKnownOpen || hasClose;
+        }
+
+        function isUrlLikeText(txt) {
+            const s = String(txt ?? "").trim();
+            if (!s) return false;
+            if (/(https?:\/\/|www\.|mailto:)/i.test(s)) return true;
+            if (/[^\s]+@[^\s]+\.[^\s]+/.test(s)) return true;
+            if (!/\s/.test(s) && s.length >= 10 && /[A-Za-z0-9]\.[A-Za-z]{2,}/.test(s)) return true;
+            return false;
+        }
+
+        function isAllCapsLike(input) {
+            const s = String(input ?? "");
+            const letters = s.replace(/[^A-Za-zÀ-ÖØ-öø-ÿĄĆĘŁŃÓŚŹŻąćęłńóśźż]/g, "");
+            if (!letters) return false;
+            return letters === letters.toUpperCase();
+        }
+
+        function isSimpleSentenceCapitalized(input) {
+            const s = String(input ?? "").trim();
+            if (!s) return false;
+            // tylko proste przypadki: Pierwsza duża, reszta małe (bez mixed-case)
+            const letters = s.replace(/[^A-Za-zÀ-ÖØ-öø-ÿĄĆĘŁŃÓŚŹŻąćęłńóśźż]/g, "");
+            if (!letters) return false;
+            const first = letters[0];
+            const rest = letters.slice(1);
+            return first === first.toUpperCase() && rest === rest.toLowerCase();
+        }
+
+        function isMixedCaseLike(input) {
+            const s = String(input ?? "");
+            const letters = s.replace(/[^A-Za-zÀ-ÖØ-öø-ÿĄĆĘŁŃÓŚŹŻąćęłńóśźż]/g, "");
+            if (!letters) return false;
+            const hasUpper = letters !== letters.toLowerCase();
+            const hasLower = letters !== letters.toUpperCase();
+            return hasUpper && hasLower && !isSimpleSentenceCapitalized(input);
+        }
+
+        function applyCaseStyle(inputCore, translationCore) {
+            const t = String(translationCore ?? "");
+            if (!t) return t;
+
+            // nie dotykamy mixed-case (iPhone, eBay itd.)
+            if (isMixedCaseLike(inputCore)) return t;
+
+            if (isAllCapsLike(inputCore)) return t.toUpperCase();
+            if (isSimpleSentenceCapitalized(inputCore)) return t.charAt(0).toUpperCase() + t.slice(1);
+            return t;
+        }
+
+        async function buildTranslationIndexFromDbFiles(dbFiles) {
+            const rawMap = new Map();
+            const normMap = new Map();
+            const normDecodedMap = new Map();
+            const normLowerMap = new Map();
+            const normDecodedLowerMap = new Map();
+
+            for (const file of dbFiles) {
+                try {
+                    const fileContent = await readFile(file.file);
+                    const workbook = XLSX.read(fileContent, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    if (!worksheet) throw new Error(`File "${file.name}" is empty or contains no sheets.`);
+                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    for (const row of json) {
+                        if (!row[0] || !row[1]) continue;
+                        const keyRaw = String(row[0]);
+                        const val = String(row[1]);
+
+                        rawMap.set(keyRaw, val);
+
+                        const kNorm = normalizeBasic(keyRaw);
+                        if (kNorm) normMap.set(kNorm, val);
+
+                        const kNormDec = normalizeDecoded(keyRaw);
+                        if (kNormDec) normDecodedMap.set(kNormDec, val);
+
+                        if (kNorm) normLowerMap.set(kNorm.toLowerCase(), val);
+                        if (kNormDec) normDecodedLowerMap.set(kNormDec.toLowerCase(), val);
+                    }
+                } catch (error) {
+                    throw new Error(`Failed to process database file "${file.name}": ${error.message}`);
+                }
+            }
+            return { rawMap, normMap, normDecodedMap, normLowerMap, normDecodedLowerMap };
+        }
+
+        function lookupTranslationPipeline(inputCore, index) {
+            const raw = String(inputCore ?? "");
+            if (index.rawMap.has(raw)) return { found: true, translation: index.rawMap.get(raw) };
+
+            const n1 = normalizeBasic(raw);
+            if (n1 && index.normMap.has(n1)) return { found: true, translation: index.normMap.get(n1) };
+
+            const n2 = normalizeDecoded(raw);
+            if (n2 && index.normDecodedMap.has(n2)) return { found: true, translation: index.normDecodedMap.get(n2) };
+
+            if (n1) {
+                const l1 = n1.toLowerCase();
+                if (index.normLowerMap.has(l1)) return { found: true, translation: index.normLowerMap.get(l1) };
+            }
+            if (n2) {
+                const l2 = n2.toLowerCase();
+                if (index.normDecodedLowerMap.has(l2)) return { found: true, translation: index.normDecodedLowerMap.get(l2) };
+            }
+            return { found: false, translation: null };
+        }
+
+        function translateHtmlTextNodes(html, index, missingSet) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<div id="__root__">${html}</div>`, "text/html");
+            const root = doc.getElementById("__root__");
+            if (!root) return { html: null, replacements: 0 };
+
+            const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "CODE", "PRE", "TEXTAREA"]);
+            const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+
+            const nodes = [];
+            let node;
+            while ((node = walker.nextNode())) nodes.push(node);
+
+            let replacements = 0;
+
+            for (const textNode of nodes) {
+                const original = textNode.nodeValue ?? "";
+                if (!original.trim()) continue;
+
+                let p = textNode.parentElement;
+                let skip = false;
+                let anchor = null;
+
+                while (p) {
+                    const tag = p.tagName;
+                    if (SKIP_TAGS.has(tag)) { skip = true; break; }
+                    if (tag === "A") { anchor = p; break; }
+                    p = p.parentElement;
+                }
+                if (skip) continue;
+
+                const edges = extractWhitespaceEdges(original);
+                const core = original.trim();
+                if (!core) continue;
+
+                // jeśli wewnątrz <a>:
+                if (anchor) {
+                    const href = anchor.getAttribute("href") || "";
+                    const hrefNorm = normalizeDecoded(href);
+                    const coreNorm = normalizeDecoded(core);
+
+                    // twarda ochrona URL i href-like:
+                    if (isUrlLikeText(core)) continue;
+                    if (href && coreNorm && hrefNorm && coreNorm === hrefNorm) continue;
+
+                    // w przeciwnym razie wolno tłumaczyć anchor text
+                } else {
+                    // poza <a> też nie tłumaczymy URL-like
+                    if (isUrlLikeText(core)) continue;
+                }
+
+                const res = lookupTranslationPipeline(core, index);
+                if (res.found) {
+                    const styled = applyCaseStyle(core, res.translation);
+                    textNode.nodeValue = edges.prefix + styled + edges.suffix;
+                    // licz podmianę tylko jeśli to realna zmiana merytoryczna
+                    if (normalizeDecoded(styled) !== normalizeDecoded(core)) replacements++;
+                } else {
+                    const missKey = normalizeDecoded(core) || normalizeBasic(core) || core;
+                    if (missKey) missingSet.add(missKey);
+                }
+            }
+
+            return { html: root.innerHTML, replacements };
+        }
+
+        function translateBetweenTagsRegex(html, index, missingSet) {
+            let out = "";
+            let currentIndex = 0;
+            let replacements = 0;
+
+            while (currentIndex < html.length) {
+                const startPos = html.indexOf(">", currentIndex);
+                if (startPos === -1) { out += html.substring(currentIndex); break; }
+
+                const endPos = html.indexOf("<", startPos + 1);
+                if (endPos === -1) { out += html.substring(currentIndex); break; }
+
+                out += html.substring(currentIndex, startPos + 1);
+
+                const fragment = html.substring(startPos + 1, endPos);
+                const edges = extractWhitespaceEdges(fragment);
+                const core = fragment.trim();
+
+                if (!core) {
+                    out += fragment;
+                } else if (isUrlLikeText(core)) {
+                    out += fragment;
+                } else {
+                    const res = lookupTranslationPipeline(core, index);
+                    if (res.found) {
+                        const styled = applyCaseStyle(core, res.translation);
+                        out += edges.prefix + styled + edges.suffix;
+                        if (normalizeDecoded(styled) !== normalizeDecoded(core)) replacements++;
+                    } else {
+                        out += fragment;
+                        const missKey = normalizeDecoded(core) || normalizeBasic(core) || core;
+                        if (missKey) missingSet.add(missKey);
+                    }
+                }
+
+                currentIndex = endPos;
+            }
+
+            return { html: out, replacements };
+        }
+
+        function translateCellValueTool1(rawValue, index, missingSet, memoCache) {
+            const raw = String(rawValue ?? "");
+            if (!raw) return { changed: false, value: raw, replacements: 0 };
+
+            if (memoCache.has(raw)) {
+                const cached = memoCache.get(raw);
+                return { changed: cached.changed, value: cached.value, replacements: cached.replacements };
+            }
+
+            const edges = extractWhitespaceEdges(raw);
+            const core = raw.trim();
+
+            if (!core) {
+                const res = { changed: false, value: raw, replacements: 0 };
+                memoCache.set(raw, res);
+                return res;
+            }
+
+            // HTML pipeline
+            if (looksLikeHtml(core)) {
+                // 1) pełne HTML 1:1
+                const full = lookupTranslationPipeline(core, index);
+                if (full.found) {
+                    const finalVal = edges.prefix + String(full.translation) + edges.suffix;
+
+                    // nie zapisuj, jeśli różnica tylko "kosmetyczna" (np. whitespace)
+                    const meaningful = normalizeDecoded(finalVal) !== normalizeDecoded(raw);
+                    const res = { changed: meaningful, value: meaningful ? finalVal : raw, replacements: meaningful ? 1 : 0 };
+                    memoCache.set(raw, res);
+                    return res;
+                }
+
+                // 2) DOM translate text nodes
+                try {
+                    const domRes = translateHtmlTextNodes(core, index, missingSet);
+                    if (domRes.html !== null && domRes.replacements > 0) {
+                        const finalVal = edges.prefix + domRes.html + edges.suffix;
+                        const meaningful = normalizeDecoded(finalVal) !== normalizeDecoded(raw);
+                        const res = { changed: meaningful, value: meaningful ? finalVal : raw, replacements: meaningful ? domRes.replacements : 0 };
+                        memoCache.set(raw, res);
+                        return res;
+                    }
+
+                    // brak realnych podmian => 1:1 oryginał
+                    const res = { changed: false, value: raw, replacements: 0 };
+                    memoCache.set(raw, res);
+                    return res;
+                } catch (e) {
+                    // 3) awaryjny regex
+                    const rxRes = translateBetweenTagsRegex(core, index, missingSet);
+                    if (rxRes.replacements > 0) {
+                        const finalVal = edges.prefix + rxRes.html + edges.suffix;
+                        const meaningful = normalizeDecoded(finalVal) !== normalizeDecoded(raw);
+                        const res = { changed: meaningful, value: meaningful ? finalVal : raw, replacements: meaningful ? rxRes.replacements : 0 };
+                        memoCache.set(raw, res);
+                        return res;
+                    }
+                    const res = { changed: false, value: raw, replacements: 0 };
+                    memoCache.set(raw, res);
+                    return res;
+                }
+            }
+
+            // Tekst zwykły
+            const match = lookupTranslationPipeline(core, index);
+            if (match.found) {
+                const styled = applyCaseStyle(core, match.translation);
+                const finalVal = edges.prefix + styled + edges.suffix;
+
+                // Nie zapisuj, jeśli po normalizacji nic realnie się nie zmieniło
+                const meaningful = normalizeDecoded(finalVal) !== normalizeDecoded(raw);
+                const res = { changed: meaningful, value: meaningful ? finalVal : raw, replacements: meaningful ? 1 : 0 };
+                memoCache.set(raw, res);
+                return res;
+            } else {
+                const missKey = normalizeDecoded(core) || normalizeBasic(core) || core;
+                if (missKey) missingSet.add(missKey);
+                const res = { changed: false, value: raw, replacements: 0 };
+                memoCache.set(raw, res);
+                return res;
+            }
+        }
+
+        async function processPhrasesFile(mainFile, dbFiles) {
+            // nowy indeks dopasowań (raw/norm/decoded/lower) + missing report + cache
+            const index = await buildTranslationIndexFromDbFiles(dbFiles);
+
+            const sourceData = await readFile(mainFile);
+            const workbook = XLSX.read(sourceData, { type: 'array', cellStyles: true });
+            let translatedSheetsCount = 0;
+            let translatedCells = 0;
+            const missingTranslations = new Set();
+            const memoCache = new Map();
+
+            for (const sheetName of workbook.SheetNames) {
+                const worksheet = workbook.Sheets[sheetName];
+                if (!worksheet) continue;
+
+                const hA2 = worksheet['A2'] ? String(worksheet['A2'].v).trim() : '';
+                const hB2 = worksheet['B2'] ? String(worksheet['B2'].v).trim() : '';
+                const hC2 = worksheet['C2'] ? String(worksheet['C2'].v).trim() : '';
+
+                if (hA2 === 'Key' && hB2 === 'Original phrase' && hC2 === 'Translation') {
+                    translatedSheetsCount++;
+                    const range = XLSX.utils.decode_range(worksheet['!ref']);
+
+                    for (let R = 2; R <= range.e.r; ++R) {
+                        const cellB_addr = XLSX.utils.encode_cell({ r: R, c: 1 });
+                        const cellB = worksheet[cellB_addr];
+                        if (!cellB || cellB.v === undefined || cellB.v === null) continue;
+
+                        const rawValue = String(cellB.v);
+                        const tr = translateCellValueTool1(rawValue, index, missingTranslations, memoCache);
+
+                        if (!tr.changed) continue;
+
+                        const cellC_addr = XLSX.utils.encode_cell({ r: R, c: 2 });
+                        XLSX.utils.sheet_add_aoa(worksheet, [[tr.value]], { origin: cellC_addr });
+
+                        // zachowaj styl jak było
+                        if (cellB.s && worksheet[cellC_addr]) worksheet[cellC_addr].s = JSON.parse(JSON.stringify(cellB.s));
+
+                        translatedCells++;
+                    }
+                }
+            }
+
+            if (translatedSheetsCount === 0) throw new Error(`Nie znaleziono arkuszy do tłumaczenia.`);
+            downloadWorkbook(workbook, mainFile.name);
+
+            let message = `<strong>Done.</strong> Translated ${translatedCells} cells. File downloaded.`;
+            if (missingTranslations.size > 0) {
+                message = `<strong>Done.</strong> Translated ${translatedCells} cells. Missing translations: ${missingTranslations.size}. File downloaded.`;
+            }
+
+            return { message, missing: missingTranslations, missingTitle: "Missing translations (Tool 1):" };
+        }
+
+        async function validateSpecsFile(file) {
+             try {
+                const data = await readFile(file);
+                const workbook = XLSX.read(data, {type: 'array'});
+                if (!workbook.SheetNames.includes('SpecsValue')) {
+                    return { valid: false, error: "File does not contain the required 'SpecsValue' sheet." };
+                }
+                return { valid: true, error: null };
+            } catch (e) {
+                return { valid: false, error: `Error reading file.` };
+            }
+        }
+
+        async function processSpecsFile(mainFile, dbFiles) {
+            const translationMap = new Map();
+            await processUploadedFiles(dbFiles, translationMap, false);
+            const sourceData = await readFile(mainFile);
+            const workbook = XLSX.read(sourceData, { type: 'array', cellStyles: true });
+            const sheetName = 'SpecsValue';
+            const worksheet = workbook.Sheets[sheetName];
+            const range = XLSX.utils.decode_range(worksheet['!ref']);
+            const missingTranslations = new Set();
+            const allSpecialTerms = [ "air suspension", "coil suspension", "seats", "seat", "air", "coil", "automatic" ];
+            const specialTermsMap = new Map();
+            for (const key of translationMap.keys()) {
+                const lowerKey = key.toLowerCase();
+                if (allSpecialTerms.includes(lowerKey)) {
+                    specialTermsMap.set(lowerKey, translationMap.get(key));
+                }
+            }
+
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+                const cellB = worksheet[XLSX.utils.encode_cell({ r: R, c: 1 })];
+                const cellC = worksheet[XLSX.utils.encode_cell({ r: R, c: 2 })];
+                if (!cellC) continue;
+                
+                const featureType = cellB ? (XLSX.utils.format_cell(cellB) || "").toLowerCase().trim() : "";
+                let originalText = cellC.w ? cellC.w : (cellC.v || "");
+                originalText = String(originalText).replace(/[\s\u00A0]+/g, ' ').trim();
+                let translatedText = originalText;
+
+                if (featureType === 'features' || featureType === 'full_features') {
+                    let tempTranslated = "";
+                    let currentIndex = 0;
+                    while (currentIndex < originalText.length) {
+                        const startPos = originalText.indexOf('>', currentIndex);
+                        if (startPos === -1) {
+                            tempTranslated += originalText.substring(currentIndex);
+                            break;
+                        }
+                        const endPos = originalText.indexOf('<', startPos + 1);
+                        if (endPos === -1) {
+                            tempTranslated += originalText.substring(currentIndex);
+                            break;
+                        }
+                        tempTranslated += originalText.substring(currentIndex, startPos + 1);
+                        const fragment = originalText.substring(startPos + 1, endPos);
+                        const trimmedFragment = fragment.trim();
+                        if (translationMap.has(trimmedFragment)) {
+                            tempTranslated += translationMap.get(trimmedFragment);
+                        } else {
+                            tempTranslated += fragment; 
+                            if (trimmedFragment) missingTranslations.add(trimmedFragment);
+                        }
+                        currentIndex = endPos;
+                    }
+                    translatedText = tempTranslated;
+                } else if (featureType === 'transmission') {
+                    let tempTranslated = originalText;
+                    if (specialTermsMap.has('automatic')) {
+                        const translation = specialTermsMap.get('automatic');
+                        const regex = new RegExp('\\bautomatic\\b', 'gi');
+                        tempTranslated = tempTranslated.replace(regex, translation);
+                    }
+                    translatedText = tempTranslated;
+                } else {
+                    let tempTranslated = originalText;
+                    if (specialTermsMap.has('air suspension')) tempTranslated = tempTranslated.replace(/air suspension/gi, specialTermsMap.get('air suspension'));
+                    if (specialTermsMap.has('coil suspension')) tempTranslated = tempTranslated.replace(/coil suspension/gi, specialTermsMap.get('coil suspension'));
+                    if (specialTermsMap.has('seats')) tempTranslated = tempTranslated.replace(/\bseats\b/gi, specialTermsMap.get('seats'));
+                    if (specialTermsMap.has('seat')) tempTranslated = tempTranslated.replace(/\bseat\b/gi, specialTermsMap.get('seat'));
+                    if (specialTermsMap.has('air')) tempTranslated = tempTranslated.replace(/\bair(?! suspension)\b/gi, specialTermsMap.get('air'));
+                    if (specialTermsMap.has('coil')) tempTranslated = tempTranslated.replace(/\bcoil(?! suspension)\b/gi, specialTermsMap.get('coil'));
+                    translatedText = tempTranslated;
+                }
+
+                if (translatedText !== originalText) {
+                    cellC.v = translatedText;
+                    cellC.t = 's';
+                    delete cellC.w;
+                }
+            }
+            
+            downloadWorkbook(workbook, mainFile.name);
+
+            let message = '<strong>Done.</strong> File downloaded.';
+            if (missingTranslations.size > 0) {
+                message = `<strong>Done.</strong> Found ${missingTranslations.size} missing translations in "features".`;
+            }
+            return { message, missing: missingTranslations };
+        }
+
+        // --- INITIALIZE TOOLS ---
+        // Returns a callback that adds a file to the tool's dbFiles list
+        function makeAddDbCallback(toolNumber) {
+            return function(file) {
+                const dbInput = document.getElementById(`dbFiles${toolNumber}`);
+                const dbFilesList = document.getElementById(`dbFilesList${toolNumber}`);
+                // Trigger the existing dbInput change handler by simulating file addition
+                // We do it by dispatching a synthetic event with a DataTransfer
+                const dt = new DataTransfer();
+                // Add existing files first
+                if (dbInput.files) {
+                    for (const f of dbInput.files) dt.items.add(f);
+                }
+                dt.items.add(file);
+                dbInput.files = dt.files;
+                dbInput.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+        }
+
+        setupTool(1, validatePhrasesFile, processPhrasesFile);
+        setupDrive(1, makeAddDbCallback(1));
+
+        setupTool(2, validateSpecsFile, processSpecsFile);
+        setupDrive(2, makeAddDbCallback(2));
+
+    </script>
+
+    </div>
+</div><!-- /main-wrapper -->
+
+<!-- ═══ REFFINE SHARED FOOTER ═══ -->
+<footer class="rf-footer">
+  <div class="rf-footer-inner">
+    <span class="rf-footer-brand">Reffine &middot; MENA &middot; JLR Hub</span>
+    <div class="rf-footer-links">
+      <a href="index.html"            class="rf-footer-link" data-rfpage="index">Dashboard</a>
+      <a href="translation.html"      class="rf-footer-link" data-rfpage="translation">Translate</a>
+      <a href="translation-tool.html" class="rf-footer-link" data-rfpage="translation-tool">Translate Tool</a>
+      <a href="seo-tool.html"         class="rf-footer-link" data-rfpage="seo-tool">SEO</a>
+      <a href="offer-generator.html"  class="rf-footer-link" data-rfpage="offer-generator">Offers</a>
+      <a href="retailer-locator.html" class="rf-footer-link" data-rfpage="retailer-locator">Retailers</a>
+      <a href="login.html"            class="rf-footer-link" data-rfpage="admin" style="color:rgba(138,142,156,0.35);">Admin</a>
+    </div>
+  </div>
+</footer>
+<script>
+(function(){
+  var p=(location.pathname.split('/').pop()||'index.html').replace('.html','')||'index';
+  document.querySelectorAll('.rf-footer-link[data-rfpage]').forEach(function(a){
+    if(a.getAttribute('data-rfpage')===p) a.classList.add('rf-active');
+  });
+})();
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SEO Report Explainer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg:        #0a0b0d;
+  --surface:   #111316;
+  --surface2:  #16181c;
+  --surface3:  #1c1f24;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.11);
+  --text:      #f0f0f0;
+  --muted:     #8a8e9c;
+  --accent:    #00d084;
+  --accent-d:  rgba(0,208,132,0.12);
+  --red:       #e8424a;
+  --red-d:     rgba(232,66,74,0.14);
+  --orange:    #e8973a;
+  --orange-d:  rgba(232,151,58,0.14);
+  --blue:      #5b8dee;
+  --blue-d:    rgba(91,141,238,0.14);
+  --green:     #00d084;
+  --green-d:   rgba(0,208,132,0.14);
+  --purple:    #9b7ee8;
+  --purple-d:  rgba(155,126,232,0.14);
+  --gray:      #8a8e9c;
+  --gray-d:    rgba(138,142,156,0.14);
+  --fixed-bg:  rgba(0,208,132,0.05);
+  --fixed-border: rgba(0,208,132,0.2);
+  --fixed-text: #00d084;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; min-height: 100vh; }
+
+/* ── HEADER ── */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 13px 24px; display: flex; align-items: center; gap: 14px;
+}
+.header-logo { font-weight: 700; font-size: 16px; color: var(--accent); display: flex; align-items: center; gap: 7px; }
+.header-sub { color: var(--muted); font-size: 12px; }
+.header-spacer { flex: 1; }
+.header-hint { font-size: 11px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 4px 10px; }
+
+/* ── LAYOUT ── */
+.layout { display: flex; height: calc(100vh - 60px); overflow: hidden; margin-top: 60px; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 248px; min-width: 248px; background: var(--surface);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+}
+.sidebar-title { padding: 13px 16px 9px; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+.file-list { overflow-y: auto; flex: 1; }
+.file-item { padding: 11px 16px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.12s; }
+.file-item:hover { background: var(--surface2); }
+.file-item.active { background: var(--surface2); border-left: 3px solid var(--accent); padding-left: 13px; }
+.file-name { font-size: 11px; font-weight: 500; color: var(--text); margin-bottom: 5px; word-break: break-all; line-height: 1.4; }
+.file-progress { margin-top: 6px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.file-progress-bar { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.3s; }
+.file-stats-row { display: flex; justify-content: space-between; margin-top: 4px; }
+.file-stat { font-size: 10px; color: var(--muted); }
+.file-stat.green { color: var(--green); font-weight: 600; }
+.sidebar-add { padding: 11px 14px; border-top: 1px solid var(--border); }
+
+/* ── BADGES ── */
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-404     { background: var(--red-d);    color: var(--red); }
+.badge-broken  { background: var(--orange-d); color: var(--orange); }
+.badge-chain   { background: var(--blue-d);   color: var(--blue); }
+.badge-hreflang{ background: var(--purple-d); color: var(--purple); }
+.badge-unknown { background: var(--gray-d);   color: var(--gray); }
+
+/* ── MAIN ── */
+.main { flex: 1; overflow-y: auto; }
+
+/* ── UPLOAD ── */
+.upload-zone { display: flex; align-items: center; justify-content: center; height: 100%; padding: 40px; }
+.drop-area {
+  border: 2px dashed var(--border2); border-radius: 12px; padding: 56px 72px;
+  text-align: center; cursor: pointer; background: var(--surface);
+  max-width: 480px; width: 100%; transition: all 0.2s;
+}
+.drop-area:hover, .drop-area.dragging { border-color: var(--accent); background: var(--surface2); }
+.drop-icon { font-size: 34px; margin-bottom: 14px; }
+.drop-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.drop-sub { color: var(--muted); font-size: 13px; line-height: 1.7; }
+
+/* ── BUTTONS ── */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #3a7de8; }
+.btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border2); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-add { display: block; width: 100%; text-align: center; background: var(--accent-d); color: var(--accent); border: 1px solid rgba(0,208,132,0.25); border-radius: 6px; padding: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-add:hover { background: rgba(0,208,132,0.2); }
+
+/* ── REPORT PANEL ── */
+.report-panel { padding: 22px 26px; }
+.report-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; gap: 12px; }
+.report-title { font-size: 19px; font-weight: 700; margin-bottom: 3px; }
+.report-file { font-size: 11px; color: var(--muted); }
+
+/* ── STAT CARDS ── */
+.stats-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 13px 16px; min-width: 110px; flex: 1; }
+.stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 4px; font-weight: 600; }
+.stat-num { font-size: 22px; font-weight: 700; line-height: 1; }
+.stat-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* ── BLOCK SECTIONS ── */
+.block { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+.block-head { padding: 12px 16px; display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; border-bottom: 1px solid var(--border); }
+.block-head:hover { background: var(--surface2); }
+.block-icon { font-size: 14px; }
+.block-title { font-weight: 600; font-size: 13px; flex: 1; }
+.block-chevron { color: var(--muted); font-size: 10px; }
+.block-body { padding: 16px; }
+
+.explainer p { color: var(--text); line-height: 1.75; font-size: 13px; margin-bottom: 10px; }
+.explainer p:last-child { margin-bottom: 0; }
+
+.play-item { display: flex; gap: 12px; padding: 13px 14px; border-radius: 6px; margin-bottom: 8px; border: 1px solid var(--border); }
+.play-item:last-child { margin-bottom: 0; }
+.play-item.p-high   { border-left: 3px solid var(--red);    background: var(--red-d); border-color: var(--red-d); }
+.play-item.p-medium { border-left: 3px solid var(--orange); background: var(--orange-d); border-color: var(--orange-d); }
+.play-item.p-low    { border-left: 3px solid var(--blue);   background: var(--blue-d); border-color: var(--blue-d); }
+.play-num { font-size: 12px; font-weight: 700; color: var(--muted); min-width: 20px; padding-top: 1px; }
+.play-title { font-weight: 600; font-size: 13px; margin-bottom: 3px; color: var(--text); }
+.play-desc { color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+/* ── TABLE CONTROLS ── */
+.table-controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.search-input { flex: 1; min-width: 160px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 11px; font-size: 12px; font-family: inherit; outline: none; color: var(--text); }
+.search-input::placeholder { color: var(--muted); }
+.search-input:focus { border-color: var(--accent); }
+.filter-sel { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 12px; font-family: inherit; outline: none; color: var(--text); cursor: pointer; }
+.toggle-fixed-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); background: var(--surface2);
+  color: var(--muted); transition: all 0.15s; font-family: inherit;
+}
+.toggle-fixed-btn.active { background: var(--green-d); border-color: var(--green); color: var(--green); }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; border-radius: 6px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  background: var(--surface2); padding: 9px 12px; text-align: left;
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--muted); border-bottom: 1px solid var(--border);
+  white-space: nowrap; position: sticky; top: 0; z-index: 2;
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover:not(.row-fixed) { background: var(--surface2); }
+
+/* FIXED ROW */
+tbody tr.row-fixed { background: var(--fixed-bg) !important; opacity: 0.55; }
+tbody tr.row-fixed td { text-decoration: line-through; color: var(--fixed-text) !important; }
+tbody tr.row-fixed td a { color: var(--fixed-text) !important; pointer-events: none; }
+tbody tr.row-fixed td .fix-cell { color: var(--fixed-text) !important; background: transparent !important; }
+tbody tr.row-fixed td .prio, tbody tr.row-fixed td .assignee-pill { opacity: 0.35; }
+
+tbody td { padding: 11px 12px; vertical-align: top; }
+
+/* CHECK CELL */
+.check-cell { width: 36px; text-align: center; vertical-align: middle !important; }
+.fix-check {
+  width: 18px; height: 18px; appearance: none; -webkit-appearance: none;
+  border: 2px solid var(--border2); border-radius: 4px; cursor: pointer;
+  background: var(--surface); transition: all 0.15s;
+  display: inline-flex; align-items: center; justify-content: center;
+  vertical-align: middle; flex-shrink: 0; position: relative;
+}
+.fix-check:hover { border-color: var(--green); }
+.fix-check:checked { background: var(--green); border-color: var(--green); }
+.fix-check:checked::after {
+  content: '✓'; position: absolute; color: #fff;
+  font-size: 11px; font-weight: 700; line-height: 1;
+}
+
+/* PRIORITY */
+.prio { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.prio-critical { background: var(--red-d);    color: var(--red); }
+.prio-high     { background: var(--orange-d); color: var(--orange); }
+.prio-medium   { background: var(--blue-d);   color: var(--blue); }
+.prio-low      { background: var(--gray-d);   color: var(--gray); }
+
+/* URL */
+.url-cell { font-size: 11px; max-width: 200px; }
+.url-cell a { color: var(--accent); text-decoration: none; word-break: break-all; }
+.url-cell a:hover { text-decoration: underline; }
+
+/* FIX CELL */
+.fix-cell {
+  font-size: 13px; line-height: 1.7; color: var(--text);
+  min-width: 320px; max-width: 440px; white-space: normal;
+  background: var(--surface2); border-radius: 5px;
+  padding: 8px 10px !important; font-weight: 400;
+}
+
+/* ASSIGNEE */
+.assignee-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  white-space: nowrap; min-width: 88px; justify-content: center;
+}
+.assignee-dev  { background: var(--blue-d);   color: var(--blue);   border: 1px solid rgba(91,141,238,0.3); }
+.assignee-seo  { background: var(--green-d);  color: var(--green);  border: 1px solid rgba(0,208,132,0.3); }
+.assignee-both { background: var(--purple-d); color: var(--purple); border: 1px solid rgba(155,126,232,0.3); }
+
+/* FOUND AT */
+.found-cell { font-size: 11px; max-width: 200px; }
+.found-cell a { color: var(--purple); text-decoration: none; word-break: break-all; display: block; }
+.found-cell a:hover { text-decoration: underline; }
+
+.inlinks-num { font-size: 14px; font-weight: 700; color: var(--text); }
+
+/* PAGINATION */
+.pagination { display: flex; align-items: center; gap: 8px; margin-top: 10px; justify-content: flex-end; }
+.page-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 5px 11px; font-size: 11px; font-family: inherit; cursor: pointer; color: var(--text); }
+.page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.page-btn:disabled { opacity: 0.35; cursor: default; }
+.page-info { font-size: 11px; color: var(--muted); }
+
+/* EXPORT */
+.export-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 20px; right: 20px;
+  background: var(--text); color: var(--bg);
+  border: 1px solid var(--border2);
+  padding: 10px 16px; border-radius: 7px; font-size: 12px;
+  z-index: 9999; display: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.toast.show { display: block; animation: fadeUp 0.2s ease; }
+.toast.success { background: var(--green); color: #fff; border-color: var(--green); }
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+
+/* ═══════════════════════════════════════════════════
+   REFFINE SHARED NAV CSS — same on all pages
+═══════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root { --border: rgba(255,255,255,0.07); --border-hov: rgba(255,255,255,0.14); --text: #f5f5f5; --text-2: #8a8e9c; --text-3: rgba(138,142,156,0.5); --accent: #00d084; }
+
+.rf-topnav {
+  position: fixed; top: 0; left: 0; right: 0; height: 60px;
+  background: rgba(10,11,13,0.96); border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex; align-items: center; padding: 0 1.5rem; gap: 0.75rem;
+  z-index: 9999; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  font-family: 'Inter', sans-serif; box-sizing: border-box; overflow: hidden;
+}
+.rf-nav-logo {
+  display: flex; flex-direction: column; gap: 1px; line-height: 1.1;
+  text-decoration: none; flex-shrink: 0; white-space: nowrap;
+}
+.rf-nav-logo .rf-logo-main { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.12em; color: #f5f5f5; }
+.rf-nav-logo .rf-logo-sub  { font-size: 0.48rem; font-weight: 500; letter-spacing: 0.18em; color: rgba(138,142,156,0.45); text-transform: uppercase; }
+.rf-dot { color: #00d084; }
+.rf-topnav-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.08); flex-shrink: 0; }
+.rf-nav-right { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.rf-navlink {
+  padding: 0.3rem 0.65rem; border-radius: 4px; font-size: 0.66rem; font-weight: 600;
+  letter-spacing: 0.04em; color: #8a8e9c; text-decoration: none; transition: all 0.15s;
+  white-space: nowrap; border: 1px solid transparent; cursor: pointer;
+  background: none; font-family: 'Inter', sans-serif;
+}
+.rf-navlink:hover { color: #f5f5f5; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.06); }
+.rf-navlink.rf-active { color: #00d084; background: rgba(0,208,132,0.08); border-color: rgba(0,208,132,0.18); }
+
+/* Clocks */
+.rf-nav-clock { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+.rf-nav-clock canvas { border-radius: 50%; }
+.rf-clock-city { font-size: 0.52rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(138,142,156,0.5); display: block; }
+.rf-clock-time { font-size: 0.75rem; font-weight: 600; color: #f5f5f5; letter-spacing: 0.05em; font-variant-numeric: tabular-nums; display: block; }
+
+/* Meeting countdown cards */
+.rf-meeting-cards { display: flex; gap: 0.4rem; align-items: stretch; flex-shrink: 0; }
+.rf-meeting-card {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 5px; padding: 0.28rem 0.6rem;
+  display: flex; flex-direction: column; gap: 0; text-decoration: none;
+  transition: border-color 0.15s; min-width: 100px; cursor: pointer;
+}
+.rf-meeting-card:hover { border-color: rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); }
+.rf-meeting-card.active-meeting { border-color: rgba(0,208,132,0.5); background: rgba(0,208,132,0.07); }
+.rf-meeting-title { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8a8e9c; white-space: nowrap; }
+.rf-meeting-countdown { font-size: 0.72rem; font-weight: 700; color: #f5f5f5; letter-spacing: 0.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rf-meeting-countdown.soon { color: #00d084; }
+.rf-meeting-countdown.now  { color: #e8424a; animation: rf-pulse 1s infinite; }
+.rf-meeting-sub { font-size: 0.48rem; color: rgba(138,142,156,0.5); white-space: nowrap; }
+@keyframes rf-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* Right section (clocks + cards) */
+.rf-right-section { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; flex-shrink: 0; }
+
+/* Hamburger */
+.rf-hamburger {
+  display: none; background: none; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 5px; padding: 6px 8px; cursor: pointer; flex-direction: column;
+  align-items: center; justify-content: center; flex-shrink: 0; gap: 4px;
+}
+.rf-hamburger span { display: block; width: 18px; height: 1.5px; background: #f5f5f5; border-radius: 2px; transition: all 0.25s; }
+.rf-hamburger.open span:nth-child(1) { transform: translateY(5.5px) rotate(45deg); }
+.rf-hamburger.open span:nth-child(2) { opacity: 0; }
+.rf-hamburger.open span:nth-child(3) { transform: translateY(-5.5px) rotate(-45deg); }
+
+/* Mobile drawer */
+.rf-mobile-drawer {
+  display: none; position: fixed; top: 60px; left: 0; right: 0; z-index: 9998;
+  background: rgba(10,11,13,0.98); border-bottom: 1px solid rgba(255,255,255,0.09);
+  padding: 0.75rem 1.5rem 1rem; flex-direction: column; gap: 2px;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.rf-mobile-drawer.open { display: flex; }
+.rf-drawer-link {
+  padding: 0.65rem 0.75rem; border-radius: 5px; font-size: 0.78rem; font-weight: 600;
+  color: #8a8e9c; text-decoration: none; border: 1px solid transparent; display: flex; align-items: center; gap: 8px;
+  background: none; font-family: 'Inter', sans-serif; cursor: pointer;
+}
+.rf-drawer-link:hover { color: #f5f5f5; background: rgba(255,255,255,0.04); }
+.rf-drawer-link.rf-active { color: #00d084; background: rgba(0,208,132,0.07); border-color: rgba(0,208,132,0.15); }
+
+/* Footer */
+.rf-footer { background: #0a0b0d; border-top: 1px solid rgba(255,255,255,0.06); padding: 1.25rem 2rem; font-family: 'Inter', sans-serif; }
+.rf-footer-inner { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.rf-footer-brand { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(138,142,156,0.32); }
+.rf-footer-links { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.rf-footer-link { padding: 0.28rem 0.65rem; border-radius: 4px; font-size: 0.67rem; font-weight: 500; letter-spacing: 0.04em; color: #8a8e9c; text-decoration: none; transition: color 0.15s; }
+.rf-footer-link:hover { color: #f5f5f5; }
+.rf-footer-link.rf-active { color: #00d084; }
+
+@media (max-width: 1200px) { .rf-right-section { display: none !important; } }
+
+
+
+@media (max-width: 1100px) { .rf-nav-right { display: none !important; } .rf-hamburger { display: flex !important; } }
+
+/* ── LIGHT THEME EXTRA FIXES ── */
+/* Clock text */
+body.rf-light .rf-clock-time { color: #0f1117 !important; }
+body.rf-light .rf-clock-city { color: rgba(82,89,107,0.6) !important; }
+
+/* Nav dividers */
+body.rf-light .rf-topnav-divider,
+body.rf-light [style*="background:rgba(255,255,255,0.08)"] { background: rgba(0,0,0,0.1) !important; }
+
+/* Meeting cards */
+body.rf-light .rf-meeting-title { color: #52596b; }
+body.rf-light .rf-meeting-sub { color: rgba(82,89,107,0.6); }
+body.rf-light .rf-meeting-countdown { color: #0f1117; }
+body.rf-light .rf-meeting-card { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); }
+body.rf-light .rf-meeting-card:hover { background: rgba(0,0,0,0.07); border-color: rgba(0,0,0,0.16); }
+
+/* Hamburger */
+body.rf-light .rf-hamburger { border-color: rgba(0,0,0,0.15); }
+body.rf-light .rf-hamburger span { background: #1a1d23; }
+
+/* Theme button */
+body.rf-light .rf-theme-btn { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.13) !important; color: #52596b !important; }
+body.rf-light .rf-theme-btn:hover { background: rgba(0,0,0,0.1) !important; color: #0f1117 !important; }
+
+/* ── INDEX PAGE: filter bar + week planner ── */
+body.rf-light .mobile-filterbar { background: rgba(255,255,255,0.97) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .filterbar-row { background: transparent; }
+body.rf-light .filterbar-row-2 { border-top-color: rgba(0,0,0,0.08) !important; }
+body.rf-light .mobile-brand-btn { color: #52596b; border-color: rgba(0,0,0,0.12); background: transparent; }
+body.rf-light .mobile-brand-btn:hover { color: #0f1117; border-color: rgba(0,0,0,0.2); background: rgba(0,0,0,0.04); }
+body.rf-light .mobile-brand-btn.active-lrdx { background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.35); color: #007d50; }
+body.rf-light .mobile-brand-btn.active-rr   { background: rgba(180,130,60,0.1); border-color: rgba(180,130,60,0.35); color: #8a6020; }
+body.rf-light .mobile-brand-btn.active-jdx  { background: rgba(200,50,50,0.1); border-color: rgba(200,50,50,0.35); color: #b01010; }
+body.rf-light .mobile-region-btn { color: #52596b; border-color: rgba(0,0,0,0.12); background: transparent; }
+body.rf-light .mobile-region-btn.active { background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.3); color: #007d50; }
+body.rf-light .nav-modes { background: rgba(0,0,0,0.04) !important; border-color: rgba(0,0,0,0.1) !important; }
+body.rf-light .nav-modes label { color: #52596b; }
+body.rf-light .nav-modes input:checked + label { background: #fff; color: #0f1117; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+body.rf-light #searchInput { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); color: #0f1117; }
+
+/* Week planner colours */
+body.rf-light #tempoCalendar,
+body.rf-light .tempo-inner { background: #f0f2f5; }
+body.rf-light #tpGrid > div[style*="#0d0f12"],
+body.rf-light [style*="background:#0d0f12"] { background: #e8eaed !important; }
+body.rf-light [style*="background:rgba(255,255,255,.04)"],
+body.rf-light [style*="background:rgba(255,255,255,.025)"] { border-color: rgba(0,0,0,0.07) !important; }
+body.rf-light [style*="color:#f0f0f0"],
+body.rf-light [style*="color: #f0f0f0"] { color: #0f1117 !important; }
+body.rf-light [style*="color:rgba(138,142,156,.75)"] { color: #52596b !important; }
+body.rf-light [style*="color:#00d084"][style*="font-weight:800"],
+body.rf-light [style*="color:#00d084"][style*="font-size:.82rem"] { color: #007d50 !important; }
+body.rf-light [style*="rgba(255,255,255,.08)"] { border-color: rgba(0,0,0,0.09) !important; }
+body.rf-light [style*="rgba(255,255,255,.07)"] { border-color: rgba(0,0,0,0.08) !important; }
+body.rf-light [style*="rgba(0,208,132,.018)"] { background: rgba(0,166,106,0.04) !important; }
+body.rf-light [style*="rgba(0,208,132,.05)"] { background: rgba(0,166,106,0.08) !important; }
+body.rf-light [style*="rgba(138,142,156,.65)"] { color: #8a8e9c !important; }
+body.rf-light [style*="rgba(138,142,156,.25)"] { color: rgba(82,89,107,0.35) !important; }
+body.rf-light [style*="rgba(138,142,156,.45)"] { color: rgba(82,89,107,0.55) !important; }
+
+/* Panel toggle button */
+body.rf-light .panel-toggle-btn { background: #fff; border-color: rgba(0,0,0,0.2); color: #52596b; }
+
+/* ── TRANSLATION PAGE ── */
+body.rf-light .translation-wrap { background: #fff; border-color: rgba(0,0,0,0.1); }
+body.rf-light .lang-bar { border-bottom-color: rgba(0,0,0,0.08); }
+body.rf-light .lang-select { background: #f5f7fa; border-color: rgba(0,0,0,0.12); color: #0f1117; }
+body.rf-light .mode-tabs { border-bottom-color: rgba(0,0,0,0.08); }
+body.rf-light .mode-tab { color: #52596b; }
+body.rf-light .mode-tab.active { color: #007d50; border-bottom-color: #00a66a; }
+body.rf-light .panel-textarea { color: #0f1117; }
+body.rf-light .panel-textarea.output-area { background: rgba(0,0,0,0.02); }
+body.rf-light .text-bottom-bar { border-top-color: rgba(0,0,0,0.08); background: transparent; }
+
+
+/* ─── LIGHT THEME ─── */
+body.rf-light {
+  --bg:         #f0f2f5;
+  --surface:    #ffffff;
+  --surface-2:  #e8eaed;
+  --nav:        #ffffff;
+  --card:       #ffffff;
+  --card-hov:   #f5f7fa;
+  --border:     rgba(0,0,0,0.09);
+  --border-hov: rgba(0,0,0,0.18);
+  --text:       #0f1117;
+  --text-2:     #52596b;
+  --text-3:     rgba(82,89,107,0.55);
+  color-scheme: light;
+}
+body.rf-light .rf-topnav { background: rgba(255,255,255,0.96) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-mobile-drawer { background: rgba(248,249,252,0.99) !important; border-bottom-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-meeting-card { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.08); }
+body.rf-light .rf-meeting-card:hover { background: rgba(0,0,0,0.06); }
+body.rf-light .rf-footer { background: #e8eaed !important; border-top-color: rgba(0,0,0,0.09) !important; }
+body.rf-light .rf-navlink { color: #52596b; }
+body.rf-light .rf-navlink:hover { color: #0f1117; background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.09); }
+body.rf-light .rf-navlink.rf-active { color: #00a66a; background: rgba(0,166,106,0.1); border-color: rgba(0,166,106,0.25); }
+body.rf-light .rf-drawer-link { color: #52596b; }
+body.rf-light .rf-drawer-link:hover { color: #0f1117; background: rgba(0,0,0,0.04); }
+body.rf-light .rf-footer-link { color: #52596b; }
+body.rf-light .rf-footer-link:hover { color: #0f1117; }
+body.rf-light .rf-footer-brand { color: rgba(82,89,107,0.4); }
+body.rf-light .rf-topnav-divider { background: rgba(0,0,0,0.09); }
+body.rf-light .rf-nav-logo .rf-logo-main { color: #0f1117 !important; }
+body.rf-light .rf-nav-logo .rf-logo-sub  { color: rgba(82,89,107,0.55) !important; }
+body.rf-light .rf-dot { color: #00a66a !important; }
+
+/* Theme toggle button */
+.rf-theme-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 6px; flex-shrink: 0;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: #8a8e9c; cursor: pointer; transition: all 0.15s;
+  font-family: inherit; padding: 0;
+}
+.rf-theme-btn:hover { background: rgba(255,255,255,0.1); color: #f5f5f5; border-color: rgba(255,255,255,0.2); }
+body.rf-light .rf-theme-btn { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.12); color: #52596b; }
+body.rf-light .rf-theme-btn:hover { background: rgba(0,0,0,0.1); color: #0f1117; }
+.rf-theme-btn .rf-icon-sun  { display: none; }
+.rf-theme-btn .rf-icon-moon { display: block; }
+body.rf-light .rf-theme-btn .rf-icon-sun  { display: block; }
+body.rf-light .rf-theme-btn .rf-icon-moon { display: none; }
+
+
+
+/* Back to dashboard button */
+.rf-back-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0.28rem 0.7rem; border-radius: 5px;
+  font-size: 0.66rem; font-weight: 600; letter-spacing: 0.04em;
+  color: #8a8e9c; text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+}
+.rf-back-btn:hover { color: #f5f5f5; border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); }
+body.rf-light .rf-back-btn { color: #52596b; border-color: rgba(0,0,0,0.13); background: rgba(0,0,0,0.04); }
+body.rf-light .rf-back-btn:hover { color: #0f1117; border-color: rgba(0,0,0,0.22); background: rgba(0,0,0,0.08); }
+</style>
+</head>
+<body>
+
+<!-- ═══ REFFINE SHARED NAV ═══ -->
+<nav class="rf-topnav" id="rfTopNav">
+
+  <!-- Logo -->
+  <a href="index.html" class="rf-nav-logo">
+    <span class="rf-logo-main">REFFINE <span class="rf-dot">·</span> MENA HUB</span>
+    <span class="rf-logo-sub">Reffine JLR MENA Dashboard</span>
+  </a>
+  <div class="rf-topnav-divider"></div>
+
+  <!-- Desktop nav links -->
+  <div class="rf-nav-right">
+    <a href="index.html"              class="rf-navlink" data-rfpage="index">Dashboard</a>
+    <a href="translation.html"        class="rf-navlink" data-rfpage="translation">Translate</a>
+    <a href="translation-tool.html"   class="rf-navlink" data-rfpage="translation-tool">Translate Tool</a>
+    <a href="seo-tool.html"           class="rf-navlink" data-rfpage="seo-tool">SEO</a>
+    <a href="offer-generator.html"    class="rf-navlink" data-rfpage="offer-generator">Offers</a>
+    <a href="retailer-locator.html"  class="rf-navlink" data-rfpage="retailer-locator">Retailers</a>
+    <div class="rf-topnav-divider"></div>
+    <button class="rf-navlink" id="rfBtnResources">Docs</button>
+    <button class="rf-navlink" id="rfBtnEmails">Mails</button>
+  </div>
+
+  <!-- Clocks + countdowns (hidden <1200px) -->
+  <div class="rf-right-section">
+    <div class="rf-nav-clock">
+      <canvas id="rfClockDubai" width="34" height="34"></canvas>
+      <div><span class="rf-clock-city">Dubai</span><span class="rf-clock-time" id="rfClockTimeDubai">--:--</span></div>
+    </div>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+    <div class="rf-nav-clock">
+      <canvas id="rfClockWarsaw" width="34" height="34"></canvas>
+      <div><span class="rf-clock-city">Warsaw</span><span class="rf-clock-time" id="rfClockTimeWarsaw">--:--</span></div>
+    </div>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+    <div class="rf-meeting-cards">
+      <a class="rf-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d" target="_blank">
+        <div class="rf-meeting-title">Weekly Call</div>
+        <div class="rf-meeting-countdown" id="rfWeeklyCountdown">--:--</div>
+        <div class="rf-meeting-sub">Mon 1:00 PM Warsaw</div>
+      </a>
+      <a class="rf-meeting-card" id="rfDailyCardLink" href="https://meet.google.com/pgy-nkum-gic" target="_blank">
+        <div class="rf-meeting-title">Daily Call</div>
+        <div class="rf-meeting-countdown" id="rfDailyCountdown">--:--</div>
+        <div class="rf-meeting-sub">07:45 · Thu 07:30 Warsaw</div>
+      </a>
+      <a class="rf-meeting-card" href="https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d" target="_blank">
+        <div class="rf-meeting-title">Offers Call</div>
+        <div class="rf-meeting-countdown" id="rfOffersCountdown">--:--</div>
+        <div class="rf-meeting-sub">Thu 8:00 AM Warsaw</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Hamburger (mobile) -->
+  <button class="rf-theme-btn" id="rfThemeBtn" style="margin-left:6px;" title="Toggle light/dark theme" aria-label="Toggle theme">
+    <svg class="rf-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="rf-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  </button>
+  
+  <a href="index.html" class="rf-back-btn" title="Back to Dashboard">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    Dashboard
+  </a>
+  <button class="rf-hamburger" id="rfHamburger" aria-label="Menu" style="margin-left:4px;">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile drawer -->
+<div class="rf-mobile-drawer" id="rfDrawer">
+  <a href="index.html" class="rf-drawer-link" data-rfpage="index">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+  <a href="translation.html" class="rf-drawer-link" data-rfpage="translation">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10"/></svg>Translate</a>
+  <a href="translation-tool.html" class="rf-drawer-link" data-rfpage="translation-tool">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6m-7 0 6-6 2-3M2 5h12M7 2h1m15 20-5-10-5 10M14 18h6"/></svg>Translate Tool</a>
+  <a href="seo-tool.html" class="rf-drawer-link" data-rfpage="seo-tool">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>SEO</a>
+  <a href="offer-generator.html" class="rf-drawer-link" data-rfpage="offer-generator">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Offers</a>
+  <a href="retailer-locator.html" class="rf-drawer-link" data-rfpage="retailer-locator">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Retailers</a>
+  <button class="rf-drawer-link" id="rfDrawerResources">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Docs</button>
+  <button class="rf-drawer-link" id="rfDrawerEmails">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>Mails</button>
+  <a href="login.html" class="rf-drawer-link" data-rfpage="admin" style="color:rgba(138,142,156,0.42);">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Admin</a>
+</div>
+
+
+<script>
+// ═══ REFFINE SHARED NAV JS ═══
+(function(){
+  var isIndex = (location.pathname.split('/').pop()||'index.html') === 'index.html' ||
+                (location.pathname.split('/').pop()||'') === '';
+
+  // Mark active page
+  var page = (location.pathname.split('/').pop()||'index.html').replace('.html','') || 'index';
+  document.querySelectorAll('[data-rfpage]').forEach(function(el){
+    if(el.getAttribute('data-rfpage') === page) el.classList.add('rf-active');
+  });
+
+  // Resources + Emails buttons
+  function handleResourcesClick(){ if(isIndex){ showMode && showMode('important'); } else { location.href='index.html#resources'; } }
+  function handleEmailsClick()   { if(isIndex){ showMode && showMode('emails');    } else { location.href='index.html#emails';    } }
+
+  document.getElementById('rfBtnResources') && document.getElementById('rfBtnResources').addEventListener('click', handleResourcesClick);
+  document.getElementById('rfBtnEmails')    && document.getElementById('rfBtnEmails').addEventListener('click', handleEmailsClick);
+  document.getElementById('rfDrawerResources') && document.getElementById('rfDrawerResources').addEventListener('click', handleResourcesClick);
+  document.getElementById('rfDrawerEmails')    && document.getElementById('rfDrawerEmails').addEventListener('click', handleEmailsClick);
+
+  // Hamburger
+  var btn = document.getElementById('rfHamburger');
+  var drawer = document.getElementById('rfDrawer');
+  if(btn && drawer){
+    btn.addEventListener('click', function(){
+      var open = drawer.classList.toggle('open'); btn.classList.toggle('open', open);
+    });
+    document.addEventListener('click', function(e){
+      if(!btn.contains(e.target)&&!drawer.contains(e.target)){ drawer.classList.remove('open'); btn.classList.remove('open'); }
+    });
+  }
+
+  // Clocks
+  function getTimeIn(tz){
+    try { return new Date(new Date().toLocaleString('en-US',{timeZone:tz,hour12:false,year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'})); }
+    catch(e){ return new Date(); }
+  }
+  function drawClock(id,tz,textId){
+    var c=document.getElementById(id); if(!c)return;
+    var ctx=c.getContext('2d'),W=c.width,CX=W/2,CY=W/2,R=W/2-1;
+    ctx.clearRect(0,0,W,W);
+    var t=getTimeIn(tz),sec=t.getSeconds(),min=t.getMinutes(),hr=t.getHours()%12,ms=t.getMilliseconds();
+    ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fillStyle='#1c1f28';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
+    for(var i=0;i<12;i++){var a=(i/12)*Math.PI*2-Math.PI/2;ctx.beginPath();ctx.moveTo(CX+Math.cos(a)*(R-2),CY+Math.sin(a)*(R-2));ctx.lineTo(CX+Math.cos(a)*(R-5),CY+Math.sin(a)*(R-5));ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
+    ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(((hr+min/60)/12)*Math.PI*2-Math.PI/2)*(R*0.45),CY+Math.sin(((hr+min/60)/12)*Math.PI*2-Math.PI/2)*(R*0.45));ctx.strokeStyle='#eceef2';ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(((min+sec/60)/60)*Math.PI*2-Math.PI/2)*(R*0.62),CY+Math.sin(((min+sec/60)/60)*Math.PI*2-Math.PI/2)*(R*0.62));ctx.strokeStyle='rgba(236,238,242,0.75)';ctx.lineWidth=1.5;ctx.stroke();
+    var sA=((sec+ms/1000)/60)*Math.PI*2-Math.PI/2;
+    ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(sA)*(R*0.7),CY+Math.sin(sA)*(R*0.7));ctx.strokeStyle='#00d084';ctx.lineWidth=1;ctx.shadowColor='#00d084';ctx.shadowBlur=3;ctx.stroke();ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(CX,CY,2,0,Math.PI*2);ctx.fillStyle='#eceef2';ctx.fill();
+    var el=document.getElementById(textId);
+    if(el) el.textContent=String(t.getHours()).padStart(2,'0')+':'+String(min).padStart(2,'0');
+  }
+  function tick(){ drawClock('rfClockDubai','Asia/Dubai','rfClockTimeDubai'); drawClock('rfClockWarsaw','Europe/Warsaw','rfClockTimeWarsaw'); requestAnimationFrame(tick); }
+  tick();
+
+  // Countdown (Date.UTC based — timezone-safe)
+  function runCountdowns(){
+    var nowMs=Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    function until(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cU=cW-off;
+        if(dow!==null&&new Date(cW).getUTCDay()!==dow) continue;
+        if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function untilDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dW).getUTCDay()===4;
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cU=cW-off; if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function fmt(ms){
+      if(ms<=0) return 'NOW';
+      var s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sc=s%60;
+      function p(n){return String(n).padStart(2,'0');}
+      return d>0 ? d+'d:'+p(h)+'h:'+p(m)+'m' : p(h)+'h:'+p(m)+'m:'+p(sc)+'s';
+    }
+    function set(id,ms){
+      var el=document.getElementById(id); if(!el) return;
+      var t=fmt(ms); el.textContent=t;
+      el.className='rf-meeting-countdown'+(t==='NOW'?' now':ms<30*60*1000?' soon':'');
+    }
+    set('rfWeeklyCountdown', until(13,0,1));
+    set('rfDailyCountdown',  untilDaily());
+    set('rfOffersCountdown', until(8,0,4));
+  }
+  runCountdowns();
+  setInterval(runCountdowns,1000);
+
+})();
+/* ─── MEETING NOTIFICATIONS ─── */
+(function(){
+  var DAILY_NORMAL = 'https://meet.google.com/pgy-nkum-gic';
+  var DAILY_THU    = 'https://meet.google.com/hxe-gzax-sre';
+
+  /* Update daily card href based on whether next daily is Thu or not */
+  function updateDailyLink(){
+    var nowMs = Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    var isThu=false;
+    for(var i=0;i<=7;i++){
+      var b=new Date(wNowMs);
+      var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+      var cThu=new Date(dW).getUTCDay()===4;
+      var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,cThu?30:45,0);
+      var cU=cW-off;
+      if(cU>nowMs){ isThu=cThu; break; }
+    }
+    var link=isThu?DAILY_THU:DAILY_NORMAL;
+    var cards=document.querySelectorAll('#rfDailyCardLink, #rfDailyMobileCard');
+    cards.forEach(function(el){ el.href=link; });
+  }
+  updateDailyLink();
+  setInterval(updateDailyLink, 60000);
+
+  /* ── Browser Notifications: 1-minute warning before each call ── */
+  var _notified = {};
+
+  var CALLS = [
+    { id:'weekly', name:'Weekly Call',  link:'https://teams.microsoft.com/l/meetup-join/19%3ameeting_YzNkOTQ1YmYtYjQxMi00ZDZhLTk5MjAtNjQ0YWU4YzRmNmZm%40thread.v2/0?context=%7b%22Tid%22%3a%224c087f80-1e07-4f72-9e41-d7d9748d0f4c%22%2c%22Oid%22%3a%221c87e926-b217-48d0-8aac-71de272a3f6d%22%7d' },
+    { id:'daily',  name:'Daily Call',   link:null },  // link resolved dynamically
+    { id:'offers', name:'Offers Call',  link:'https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWFjNDgyMGUtOTYyMy00ZjE3LWJmYzItOTk4NjBhNGEyYzkz%40thread.v2/0?context=%7b%22Tid%22%3a%2241eb501a-f671-4ce0-a5bf-b64168c3705f%22%2c%22Oid%22%3a%222ca169c9-6138-482a-8d04-0a07b414d160%22%7d' },
+  ];
+
+  function requestPermission(){
+    if(!('Notification' in window)) return;
+    if(Notification.permission==='default'){
+      Notification.requestPermission();
+    }
+  }
+  /* Ask for permission on first user interaction */
+  document.addEventListener('click', requestPermission, {once:true});
+
+  function getMsUntilCall(callId){
+    var nowMs=Date.now();
+    function offMs(){
+      var d=new Date(nowMs),s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/); if(!m) return 3600000;
+      var h=+m[4]; if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6])-nowMs;
+    }
+    var off=offMs(), wNowMs=nowMs+off;
+    function until(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cU=cW-off;
+        if(dow!==null&&new Date(cW).getUTCDay()!==dow) continue;
+        if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    function untilDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dW).getUTCDay()===4;
+        var cW=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cU=cW-off; if(cU>nowMs) return cU-nowMs;
+      }
+      return 86400000;
+    }
+    if(callId==='weekly') return until(13,0,1);
+    if(callId==='daily')  return untilDaily();
+    if(callId==='offers') return until(8,0,4);
+    return 86400000;
+  }
+
+  function getDailyLink(){
+    var el=document.getElementById('rfDailyCardLink');
+    return el ? el.href : DAILY_NORMAL;
+  }
+
+  function fireNotification(call){
+    if(!('Notification' in window)||Notification.permission!=='granted') return;
+    var link=call.id==='daily'?getDailyLink():call.link;
+    var n=new Notification('📞 '+call.name+' starts in 1 minute', {
+      body: 'Click to join the call now',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%2300d084"/><text x="16" y="21" text-anchor="middle" font-size="16">📞</text></svg>',
+      requireInteraction: false,
+      tag: call.id
+    });
+    n.onclick=function(){ window.open(link,'_blank'); n.close(); };
+    setTimeout(function(){ n.close(); }, 15000);
+  }
+
+  function checkNotifications(){
+    var nowMs=Date.now();
+    /* Build a key based on current date+hour so notification fires once per occurrence */
+    var dayKey = new Date(nowMs).toISOString().slice(0,13);
+    CALLS.forEach(function(call){
+      var ms=getMsUntilCall(call.id);
+      var key=call.id+':'+dayKey;
+      /* Fire when 55–65 seconds remain (window to catch the 1-min mark) */
+      if(ms>55000&&ms<=65000&&!_notified[key]){
+        _notified[key]=true;
+        fireNotification(call);
+      }
+      /* Clean up old keys to avoid memory leak */
+      if(ms>120000) delete _notified[call.id+':'+new Date(nowMs-3600000).toISOString().slice(0,13)];
+    });
+  }
+
+  setInterval(checkNotifications, 5000);
+})();
+
+/* ─── THEME TOGGLE ─── */
+(function(){
+  var STORE = 'rf_theme';
+  function applyTheme(t){ document.body.classList.toggle('rf-light', t==='light'); try{ localStorage.setItem(STORE, t); }catch(e){} }
+  try{ var saved = localStorage.getItem(STORE) || 'dark'; } catch(e){ var saved = 'dark'; }
+  applyTheme(saved);
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('rfThemeBtn');
+    if(btn){ btn.addEventListener('click', function(){
+      applyTheme(document.body.classList.contains('rf-light') ? 'dark' : 'light');
+    }); }
+  });
+})();
+
+</script>
+
+
+<script>
+// ═══ SHARED CLOCK + COUNTDOWN (injected on all pages) ═══
+(function(){
+
+function getTimeIn(tz){
+  try {
+    return new Date(new Date().toLocaleString('en-US',{timeZone:tz,hour12:false,
+      year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'}));
+  } catch(e){ return new Date(); }
+}
+
+function drawSmallClock(canvasId,tz,textId){
+  var canvas=document.getElementById(canvasId); if(!canvas) return;
+  var ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,CX=W/2,CY=H/2,R=W/2-1;
+  ctx.clearRect(0,0,W,H);
+  var now=getTimeIn(tz),sec=now.getSeconds(),min=now.getMinutes(),hr=now.getHours()%12,ms=now.getMilliseconds();
+  ctx.beginPath();ctx.arc(CX,CY,R,0,Math.PI*2);ctx.fillStyle='#1c1f28';ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
+  for(var i=0;i<12;i++){var a=(i/12)*Math.PI*2-Math.PI/2;ctx.beginPath();ctx.moveTo(CX+Math.cos(a)*(R-2.5),CY+Math.sin(a)*(R-2.5));ctx.lineTo(CX+Math.cos(a)*(R-5),CY+Math.sin(a)*(R-5));ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
+  ctx.lineCap='round';
+  var hA=((hr+min/60)/12)*Math.PI*2-Math.PI/2;
+  ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(hA)*(R*0.45),CY+Math.sin(hA)*(R*0.45));ctx.strokeStyle='#eceef2';ctx.lineWidth=2;ctx.stroke();
+  var mA=((min+sec/60)/60)*Math.PI*2-Math.PI/2;
+  ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(mA)*(R*0.65),CY+Math.sin(mA)*(R*0.65));ctx.strokeStyle='rgba(236,238,242,0.75)';ctx.lineWidth=1.5;ctx.stroke();
+  var sA=((sec+ms/1000)/60)*Math.PI*2-Math.PI/2;
+  ctx.beginPath();ctx.moveTo(CX,CY);ctx.lineTo(CX+Math.cos(sA)*(R*0.72),CY+Math.sin(sA)*(R*0.72));ctx.strokeStyle='#00d084';ctx.lineWidth=1;ctx.shadowColor='#00d084';ctx.shadowBlur=4;ctx.stroke();ctx.shadowBlur=0;
+  ctx.beginPath();ctx.arc(CX,CY,2,0,Math.PI*2);ctx.fillStyle='#eceef2';ctx.fill();
+  var el=document.getElementById(textId);
+  if(el) el.textContent=String(now.getHours()).padStart(2,'0')+':'+String(min).padStart(2,'0');
+}
+
+function tickClocks(){ drawSmallClock('clockDubai','Asia/Dubai','clockTimeDubai'); drawSmallClock('clockWarsaw','Europe/Warsaw','clockTimeWarsaw'); requestAnimationFrame(tickClocks); }
+tickClocks();
+
+  function updateCountdowns(){
+    var nowMs = Date.now();
+    function warsawOffsetMs(){
+      var d=new Date(nowMs);
+      var s=d.toLocaleString('en-US',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+      var m=s.match(/(\d+)\/(\d+)\/(\d+),?\s+(\d+):(\d+):(\d+)/);
+      if(!m) return 3600000;
+      var h=parseInt(m[4]); if(h===24)h=0;
+      return Date.UTC(+m[3],+m[1]-1,+m[2],h,+m[5],+m[6]) - nowMs;
+    }
+    var offMs=warsawOffsetMs();
+    var wNowMs=nowMs+offMs;
+    function msUntil(tH,tM,dow){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var cWMs=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,tH,tM,0);
+        var cUTC=cWMs-offMs;
+        if(dow!==null&&new Date(cWMs).getUTCDay()!==dow) continue;
+        if(cUTC>nowMs) return cUTC-nowMs;
+      }
+      return 86400000;
+    }
+    function msDaily(){
+      for(var i=0;i<=7;i++){
+        var b=new Date(wNowMs);
+        var dWMs=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,0,0,0);
+        var isThu=new Date(dWMs).getUTCDay()===4;
+        var cWMs=Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()+i,7,isThu?30:45,0);
+        var cUTC=cWMs-offMs;
+        if(cUTC>nowMs) return cUTC-nowMs;
+      }
+      return 86400000;
+    }
+    function fmt(ms){
+      if(ms<=0) return 'NOW';
+      var s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sc=s%60;
+      function p(n){return String(n).padStart(2,'0');}
+      if(d>0) return d+'d : '+p(h)+'h : '+p(m)+'m';
+      return p(h)+'h : '+p(m)+'m : '+p(sc)+'s';
+    }
+    function apply(ms,id,cls){
+      var el=document.getElementById(id); if(!el) return;
+      var t=fmt(ms); el.textContent=t;
+      el.className=cls+(t==='NOW'?' now':ms<30*60*1000?' soon':'');
+      var card=el.closest?el.closest('.meeting-card'):null;
+      if(card) card.classList.toggle('active-meeting',t==='NOW');
+    }
+    apply(msUntil(13,0,1),'weeklyCountdown','meeting-card-countdown');
+    apply(msDaily(),'dailyCountdown','meeting-card-countdown');
+    apply(msUntil(8,0,4),'offersCountdown','meeting-card-countdown');
+  }
+  updateCountdowns();
+  setInterval(updateCountdowns,1000);
+
+})();
+</script>
+
+
+
+
+
+
+<div class="layout">
+
+  <div class="sidebar">
+    <div class="sidebar-title">Loaded Files</div>
+    <div class="file-list" id="fileList">
+      <div style="padding:16px;color:var(--muted);font-size:12px;">No files yet.</div>
+    </div>
+    <div class="sidebar-add">
+      <label class="btn-add" for="hiddenInput">＋ Add more files</label>
+      <input type="file" id="hiddenInput" accept=".csv" multiple style="display:none"/>
+    </div>
+  </div>
+
+  <div class="main" id="mainPanel">
+    <div class="upload-zone" id="uploadZone">
+      <div class="drop-area" id="dropArea">
+        <div class="drop-icon">📂</div>
+        <div class="drop-title">Drop your SEO CSV files here</div>
+        <div class="drop-sub">
+          Works with: 404 pages · Broken redirects<br/>
+          Redirect chains · Hreflang issues<br/><br/>
+          Report type is auto-detected from column headers
+        </div>
+        <label class="btn btn-primary" for="hiddenInput" style="margin-top:18px;cursor:pointer;display:inline-flex;">Browse Files</label>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+const reports = [];
+let activeIndex = -1;
+let currentPage = 1;
+const PAGE_SIZE = 50;
+let searchTerm = '';
+let priorityFilter = '';
+let showFixed = true; // whether to show fixed rows
+
+// fixedRows[reportIndex] = Set of URL strings marked fixed
+const fixedRows = [];
+
+// ── CSV ────────────────────────────────────────────────────────
+function parseCsv(text) {
+  const r = Papa.parse(text, { header: true, skipEmptyLines: true, quoteChar: '"' });
+  return { headers: r.meta.fields || [], rows: r.data };
+}
+
+// ── DETECT ────────────────────────────────────────────────────
+function detectReportType(headers, rows) {
+  const h = headers.map(x => x.toLowerCase());
+  if (h.includes('hreflang links') || h.includes('hreflang issues')) return 'hreflang';
+  if (h.includes('redirect chain urls') || h.includes('no. of redirect chain urls')) return 'chain';
+  if (h.includes('redirect url') && h.includes('redirect url code')) {
+    if (rows.slice(0,50).some(r => (r['HTTP status code']||'') === '301')) return 'broken';
+  }
+  if (rows.slice(0,50).some(r => (r['HTTP status code']||'') === '404') && h.includes('first found at')) return '404';
+  return 'unknown';
+}
+
+// ── PRIORITY ──────────────────────────────────────────────────
+function computePriority(type, row) {
+  const il = parseInt(row['No. of all inlinks']||'0')||0;
+  if (type==='broken')   { return il>=100?'CRITICAL':il>=10?'HIGH':'MEDIUM'; }
+  if (type==='404')      { return il>=200?'CRITICAL':il>=50?'HIGH':il>=10?'MEDIUM':'LOW'; }
+  if (type==='chain')    { const h=parseInt(row['No. of redirect chain URLs']||'0')||0; return h>=4?'HIGH':h>=2?'MEDIUM':'LOW'; }
+  if (type==='hreflang') { const i=(row['Hreflang issues']||'').toLowerCase(); return (i.includes('404')||i.includes('301'))?'HIGH':i?'MEDIUM':'LOW'; }
+  return 'LOW';
+}
+
+// ── FIX ───────────────────────────────────────────────────────
+function generateFix(type, row) {
+  if (type==='404') {
+    const url=row['URL']||'', fa=(row['First found at']||'').split('\n')[0], il=parseInt(row['No. of all inlinks']||'0')||0;
+    if (url.includes('https:/')&&!url.includes('https://')) return '⚠️ Malformed URL — fix the CMS entry that generated a broken path (double slash).';
+    if (url.includes('/www.')) return '⚠️ Malformed URL — "/www." inside path. Fix the CMS link entry that produced this URL.';
+    if (il===0) return 'No internal links point here. Verify if the page should exist; if not, leave the 404.';
+    if (fa) return `Fix the broken link on "${fa}" to point to a live page. Then add a 301 redirect from this URL to the best matching live page.`;
+    return 'Add a 301 redirect to the closest matching live page. Find and update internal links pointing to this broken URL.';
+  }
+  if (type==='broken') {
+    const t=row['Redirect URL']||'', c=row['Redirect URL code']||'404';
+    return `Redirect destination returns ${c}. Either publish "${t}" so it returns 200, OR update the redirect rule to point to a different live page. Update internal links to the final 200 URL directly.`;
+  }
+  if (type==='chain') {
+    const chain=(row['Redirect chain URLs']||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const final=chain[chain.length-1]||row['Redirect URL']||'(see chain)';
+    const hops=row['No. of redirect chain URLs']||chain.length;
+    return `${hops}-hop chain. Update the first redirect to jump directly to: ${final} — skipping all middle steps. Update internal links to use the final URL.`;
+  }
+  if (type==='hreflang') {
+    const issues=(row['Hreflang issues']||'').replace(/\n/g,' · ');
+    if (!issues) return 'No issues detected. Verify all hreflang targets return 200 and a self-referencing tag exists.';
+    return `Issues: ${issues.slice(0,300)}. Fix: use final 200 URLs only in hreflang (no 301/404 targets), add self-referencing tag, add x-default if serving multiple regions.`;
+  }
+  return 'Review this row manually.';
+}
+
+// ── ASSIGNEE ──────────────────────────────────────────────────
+function getAssignee(type) {
+  if (type==='broken')   return { label:'⚙️ Dev',       cls:'assignee-dev' };
+  if (type==='chain')    return { label:'⚙️ Dev',       cls:'assignee-dev' };
+  if (type==='404')      return { label:'🔍 SEO + Dev',  cls:'assignee-both' };
+  if (type==='hreflang') return { label:'🌐 Dev + SEO',  cls:'assignee-both' };
+  return { label:'🔍 SEO', cls:'assignee-seo' };
+}
+
+// ── ROW KEY ───────────────────────────────────────────────────
+function rowKey(row, idx) {
+  return (row['URL']||'') + '||' + idx;
+}
+
+// ── CONTENT ───────────────────────────────────────────────────
+const CONTENT = {
+  '404': {
+    title:'404 — Broken Pages', badgeCls:'badge-404', badgeLabel:'404 Pages',
+    what:`<p>These URLs return a 404 "Not Found" error — your site has links pointing to pages that no longer exist. Every 404 is a dead end for visitors and for Google.</p>
+    <p><strong>No. of all inlinks</strong> = how many pages on your site link to this broken URL. Higher = more urgent. <strong>First found at</strong> = the exact page where the broken link lives (clickable).</p>`,
+    playbook:[
+      {level:'p-high',num:'1',title:'High inlinks (50+) → Add a 301 redirect immediately',desc:'Set up a server-side 301 redirect from the broken URL to the best matching live page. This recovers link equity and fixes user experience right away.'},
+      {level:'p-high',num:'2',title:'Fix the source link on "First found at"',desc:'After the redirect, also update the actual link on the source page to point directly to the new live URL. Internal links should always go to final live URLs, not through redirects.'},
+      {level:'p-medium',num:'3',title:'Malformed URLs → Fix in CMS',desc:'URLs with double slashes or "/www." inside the path are CMS data-entry errors. Find the broken link in your CMS and fix it directly. No redirect needed.'},
+      {level:'p-medium',num:'4',title:'Low inlinks (1–10) → Redirect or clean up',desc:'If there\'s a logical replacement, add a 301 redirect. If the page is permanently gone, leave the 404 and remove the broken internal link.'},
+      {level:'p-low',num:'5',title:'Zero inlinks → Low priority',desc:'Nothing links here. Ensure no navigation or sitemap leads to this URL, then move on.'},
+    ]
+  },
+  'broken': {
+    title:'Broken Redirects (301→404)', badgeCls:'badge-broken', badgeLabel:'Broken Redirects',
+    what:`<p>These are half-broken redirects: the source URL does redirect (301), but the destination it sends traffic to doesn't exist (404). Visitors and Google hit a dead page anyway.</p>
+    <p><strong>Redirect URL</strong> = where it tries to send traffic. <strong>Redirect URL code</strong> = the status of that destination (usually 404). <strong>No. of all inlinks</strong> = how many links point to the source.</p>`,
+    playbook:[
+      {level:'p-high',num:'1',title:'Fix the redirect destination first',desc:'Either publish the destination page (make it 200) OR update the redirect rule to point to a different live page. The 301 source is fine — it\'s the target that\'s broken.'},
+      {level:'p-high',num:'2',title:'Update internal links to the final URL',desc:'Once fixed, update internal links that still point to the redirecting source URL. Always link directly to the final 200 URL, never to a redirecting URL.'},
+      {level:'p-medium',num:'3',title:'Sort by inlinks to prioritize',desc:'Higher inlink count = more traffic through the broken path. Fix those first.'},
+    ]
+  },
+  'chain': {
+    title:'Redirect Chains (Multiple Hops)', badgeCls:'badge-chain', badgeLabel:'Redirect Chains',
+    what:`<p>A redirect chain means reaching the final page requires 2+ redirects — e.g. A → B → C. Each extra hop wastes Google's crawl budget and bleeds link equity.</p>
+    <p><strong>Redirect chain URLs</strong> = all the steps. <strong>No. of redirect chain URLs</strong> = number of hops. The last URL in the chain is where you should redirect directly.</p>`,
+    playbook:[
+      {level:'p-high',num:'1',title:'Collapse to 1 hop: first URL → final URL',desc:'Update the redirect rule so URL #1 redirects directly to the last 200 page — skipping every middle step. This is a server/CDN config change.'},
+      {level:'p-high',num:'2',title:'Update internal links to the final URL',desc:'Any internal links pointing to the first URL in the chain should be updated to point to the final 200 destination directly.'},
+      {level:'p-medium',num:'3',title:'Prioritize 3+ hop chains first',desc:'More hops = more waste. Check the "No. of redirect chain URLs" column and fix the longest chains first.'},
+    ]
+  },
+  'hreflang': {
+    title:'Hreflang Issues (International SEO)', badgeCls:'badge-hreflang', badgeLabel:'Hreflang',
+    what:`<p>Hreflang tags tell Google which language/country version of a page to serve to which audience. When these tags point to broken or redirecting URLs, Google ignores the entire set.</p>
+    <p><strong>Hreflang links</strong> = URLs declared in the set. <strong>Hreflang links codes</strong> = HTTP status of each. <strong>Hreflang issues</strong> = detected problems for that page.</p>`,
+    playbook:[
+      {level:'p-high',num:'1',title:'Replace 301/404 hreflang targets with final 200 URLs',desc:'Every hreflang URL must be a live 200 page. If a tag points to a redirect or 404, Google ignores the whole set. Update to the canonical live URL.'},
+      {level:'p-high',num:'2',title:'Add the missing self-referencing tag',desc:'Every page must have a hreflang tag pointing back to itself. If missing, the set is invalid. Add it in the <head> alongside the other hreflang tags.'},
+      {level:'p-medium',num:'3',title:'Add x-default for the primary/international page',desc:'x-default tells Google which page to show when no country/language match exists. Add it if your site serves multiple markets.'},
+      {level:'p-low',num:'4',title:'Remove hreflang for markets without a live page',desc:'If a market URL returns 404, either publish that page or remove it from the hreflang set. A broken pointer is worse than having none.'},
+    ]
+  }
+};
+
+// ── SIDEBAR ───────────────────────────────────────────────────
+function renderSidebar() {
+  const el = document.getElementById('fileList');
+  if (!reports.length) { el.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px;">No files yet.</div>'; return; }
+  el.innerHTML = reports.map((r,i)=>{
+    const c = CONTENT[r.type]||{badgeLabel:'UNKNOWN',badgeCls:'badge-unknown'};
+    const fixed = fixedRows[i]||new Set();
+    const total = r.enriched.length;
+    const fixedCount = fixed.size;
+    const pct = total>0 ? Math.round(fixedCount/total*100) : 0;
+    return `<div class="file-item ${i===activeIndex?'active':''}" onclick="activateReport(${i})">
+      <div class="file-name">${r.filename}</div>
+      <span class="badge ${c.badgeCls}">${c.badgeLabel}</span>
+      <div class="file-stats-row">
+        <span class="file-stat">${total.toLocaleString()} rows</span>
+        <span class="file-stat green">${fixedCount} fixed (${pct}%)</span>
+      </div>
+      <div class="file-progress"><div class="file-progress-bar" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── ACTIVATE ──────────────────────────────────────────────────
+function activateReport(idx) {
+  activeIndex=idx; currentPage=1; searchTerm=''; priorityFilter='';
+  renderSidebar(); renderReport(reports[idx]);
+}
+
+function getFiltered(report) {
+  const fixed = fixedRows[activeIndex]||new Set();
+  let rows = report.enriched;
+  if (!showFixed) rows = rows.filter((_,i)=>!fixed.has(rowKey(rows[i],i)));
+  if (searchTerm) { const t=searchTerm.toLowerCase(); rows=rows.filter(r=>Object.values(r).join(' ').toLowerCase().includes(t)); }
+  if (priorityFilter) rows=rows.filter(r=>r._priority===priorityFilter);
+  return rows;
+}
+
+// ── RENDER REPORT ─────────────────────────────────────────────
+function renderReport(report) {
+  const panel = document.getElementById('mainPanel');
+  const uz = document.getElementById('uploadZone');
+  if (uz) uz.style.display='none';
+
+  const c = CONTENT[report.type]||{title:'Unknown Report',what:'<p>Could not detect report type.</p>',playbook:[],badgeLabel:'UNKNOWN',badgeCls:'badge-unknown'};
+  const fixed = fixedRows[activeIndex]||new Set();
+  const crit=report.enriched.filter(r=>r._priority==='CRITICAL').length;
+  const high=report.enriched.filter(r=>r._priority==='HIGH').length;
+  const med=report.enriched.filter(r=>r._priority==='MEDIUM').length;
+  const low=report.enriched.filter(r=>r._priority==='LOW').length;
+  const fixedCount=fixed.size;
+  const remaining=report.enriched.length-fixedCount;
+
+  panel.innerHTML=`<div class="report-panel">
+    <div class="report-top">
+      <div>
+        <div class="report-title">${c.title}</div>
+        <div class="report-file">${report.filename}</div>
+      </div>
+      <span class="badge ${c.badgeCls}" style="font-size:11px;padding:4px 10px;">${c.badgeLabel}</span>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-num">${report.enriched.length.toLocaleString()}</div><div class="stat-sub">issues found</div></div>
+      <div class="stat-card"><div class="stat-label">Critical</div><div class="stat-num" style="color:var(--red)">${crit}</div><div class="stat-sub">fix today</div></div>
+      <div class="stat-card"><div class="stat-label">High</div><div class="stat-num" style="color:var(--orange)">${high}</div><div class="stat-sub">fix this week</div></div>
+      <div class="stat-card"><div class="stat-label">Med + Low</div><div class="stat-num" style="color:var(--blue)">${med+low}</div><div class="stat-sub">schedule later</div></div>
+      <div class="stat-card" id="fixedStatCard"><div class="stat-label">Fixed ✓</div><div class="stat-num" style="color:var(--green)" id="fixedStatNum">${fixedCount}</div><div class="stat-sub" id="fixedStatSub">${remaining} remaining</div></div>
+    </div>
+
+    <div class="block">
+      <div class="block-head" onclick="toggleBlock('explain')">
+        <span class="block-icon">💡</span><span class="block-title">What This Report Means</span>
+        <span class="block-chevron" id="explain-chev">▼</span>
+      </div>
+      <div class="block-body explainer" id="explain-body">${c.what}</div>
+    </div>
+
+    <div class="block">
+      <div class="block-head" onclick="toggleBlock('playbook')">
+        <span class="block-icon">🛠️</span><span class="block-title">How To Fix — Playbook</span>
+        <span class="block-chevron" id="playbook-chev">▼</span>
+      </div>
+      <div class="block-body" id="playbook-body">
+        ${c.playbook.map(p=>`<div class="play-item ${p.level}">
+          <div class="play-num">${p.num}.</div>
+          <div><div class="play-title">${p.title}</div><div class="play-desc">${p.desc}</div></div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-head" onclick="toggleBlock('table')">
+        <span class="block-icon">📋</span><span class="block-title">All Rows — Recommendations</span>
+        <span class="block-chevron" id="table-chev">▼</span>
+      </div>
+      <div class="block-body" id="table-body">
+        <div class="table-controls">
+          <input class="search-input" id="searchInput" placeholder="Search URLs, fixes…" oninput="onSearch()"/>
+          <select class="filter-sel" id="prioritySelect" onchange="onFilter()">
+            <option value="">All priorities</option>
+            <option value="CRITICAL">🔴 Critical</option>
+            <option value="HIGH">🟠 High</option>
+            <option value="MEDIUM">🔵 Medium</option>
+            <option value="LOW">⚪ Low</option>
+          </select>
+          <button class="toggle-fixed-btn ${showFixed?'':'active'}" id="toggleFixedBtn" onclick="toggleShowFixed()">
+            ${showFixed ? '👁 Showing fixed' : '🙈 Hiding fixed'}
+          </button>
+        </div>
+        <div id="tableContainer"></div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-head" onclick="toggleBlock('export')">
+        <span class="block-icon">⬇️</span><span class="block-title">Export</span>
+        <span class="block-chevron" id="export-chev">▼</span>
+      </div>
+      <div class="block-body" id="export-body">
+        <div class="export-btns">
+          <button class="btn btn-primary" onclick="downloadCSV()">⬇ Download Actions CSV</button>
+          <button class="btn btn-outline" onclick="downloadCSV(true)">⬇ Download Unfixed Only</button>
+          <button class="btn btn-outline" onclick="copyJira()">📋 Copy Jira Bullets</button>
+        </div>
+        <p style="margin-top:10px;color:var(--muted);font-size:11px;">CSV columns: URL · Issue Summary · Recommended Fix · Priority · Assignee · Source Page · Fixed</p>
+      </div>
+    </div>
+  </div>`;
+
+  renderTable(report);
+}
+
+function toggleBlock(id) {
+  const body=document.getElementById(id+'-body'), chev=document.getElementById(id+'-chev');
+  if (!body) return;
+  const hidden=body.style.display==='none';
+  body.style.display=hidden?'':'none';
+  if (chev) chev.textContent=hidden?'▼':'▶';
+}
+
+// ── MARK FIXED ────────────────────────────────────────────────
+function toggleFixedByRow(event, key) {
+  // Don't trigger if clicking a link, the checkbox itself, or a button
+  const tag = event.target.tagName.toLowerCase();
+  if (tag === 'a' || tag === 'input' || tag === 'button') return;
+  // Find the checkbox in this row and toggle it
+  const checkbox = event.currentTarget.querySelector('.fix-check');
+  if (!checkbox) return;
+  checkbox.checked = !checkbox.checked;
+  toggleFixed(key, checkbox);
+}
+
+
+function toggleFixed(key, checkbox) {
+  if (!fixedRows[activeIndex]) fixedRows[activeIndex]=new Set();
+  const set=fixedRows[activeIndex];
+  if (checkbox.checked) set.add(key); else set.delete(key);
+
+  // update the row style live without full re-render
+  const tr=checkbox.closest('tr');
+  if (tr) tr.classList.toggle('row-fixed', checkbox.checked);
+
+  updateFixedStats();
+  renderSidebar();
+}
+
+function updateFixedStats() {
+  if (activeIndex<0) return;
+  const fixed=fixedRows[activeIndex]||new Set();
+  const total=reports[activeIndex].enriched.length;
+  const remaining=total-fixed.size;
+  const numEl=document.getElementById('fixedStatNum');
+  const subEl=document.getElementById('fixedStatSub');
+  if (numEl) numEl.textContent=fixed.size;
+  if (subEl) subEl.textContent=`${remaining} remaining`;
+}
+
+function toggleShowFixed() {
+  showFixed=!showFixed;
+  const btn=document.getElementById('toggleFixedBtn');
+  if (btn) {
+    btn.textContent=showFixed?'👁 Showing fixed':'🙈 Hiding fixed';
+    btn.className='toggle-fixed-btn'+(showFixed?'':' active');
+  }
+  currentPage=1;
+  if (activeIndex>=0) renderTable(reports[activeIndex]);
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────────
+function renderTable(report) {
+  const fixed=fixedRows[activeIndex]||new Set();
+  const filtered=getFilteredWithKeys(report);
+  const total=filtered.length;
+  const totalPages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+  const start=(currentPage-1)*PAGE_SIZE;
+  const pageRows=filtered.slice(start,start+PAGE_SIZE);
+  const type=report.type;
+
+  const showFoundAt=['404','broken'].includes(type)&&report.headers.includes('First found at');
+  const showInlinks=report.headers.includes('No. of all inlinks');
+  const showHops=type==='chain'&&report.headers.includes('No. of redirect chain URLs');
+  const showRedirect=['broken','chain'].includes(type)&&report.headers.includes('Redirect URL');
+
+  const container=document.getElementById('tableContainer');
+  if (!container) return;
+
+  container.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr>
+      ${showFoundAt?'<th>First Found At</th>':''}
+      <th>Assignee</th>
+      <th>Recommended Fix</th>
+      ${showRedirect?'<th>Redirect URL</th>':''}
+      ${showHops?'<th>Hops</th>':''}
+      ${showInlinks?'<th>Inlinks</th>':''}
+      <th>URL</th>
+      <th>Priority</th>
+      <th class="check-cell">✓</th>
+    </tr></thead>
+    <tbody>
+      ${pageRows.map(({row,key})=>{
+        const isFixed=fixed.has(key);
+        const fa=(row['First found at']||'').split('\n')[0].trim();
+        const ru=(row['Redirect URL']||'').split('\n')[0].trim();
+        return `<tr class="${isFixed?'row-fixed':''}" onclick="toggleFixedByRow(event,'${escAttr(key)}')" style="cursor:pointer;">
+          ${showFoundAt?`<td class="found-cell">${fa?`<a href="${esc(fa)}" target="_blank">${trunc(fa,46)}</a>`:'<span style="color:var(--muted)">—</span>'}</td>`:''}
+          <td><span class="assignee-pill ${row._assignee.cls}">${row._assignee.label}</span></td>
+          <td class="fix-cell">${row._fix}</td>
+          ${showRedirect?`<td class="url-cell"><a href="${esc(ru)}" target="_blank">${trunc(ru,42)}</a></td>`:''}
+          ${showHops?`<td><strong>${row['No. of redirect chain URLs']||''}</strong></td>`:''}
+          ${showInlinks?`<td><span class="inlinks-num">${row['No. of all inlinks']||'0'}</span></td>`:''}
+          <td class="url-cell"><a href="${esc(row.URL||'')}" target="_blank">${trunc(row.URL||'',52)}</a></td>
+          <td><span class="prio prio-${row._priority.toLowerCase()}">${row._priority}</span></td>
+          <td class="check-cell">
+            <input type="checkbox" class="fix-check" ${isFixed?'checked':''} onchange="toggleFixed('${escAttr(key)}',this)" title="Mark as fixed"/>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table></div>`;
+
+  const pag=document.getElementById('pagination');
+  if (pag) pag.innerHTML=`
+    <button class="page-btn" onclick="changePage(-1)" ${currentPage<=1?'disabled':''}>← Prev</button>
+    <span class="page-info">Page ${currentPage} of ${totalPages} · ${total.toLocaleString()} rows</span>
+    <button class="page-btn" onclick="changePage(1)" ${currentPage>=totalPages?'disabled':''}>Next →</button>`;
+}
+
+function getFilteredWithKeys(report) {
+  const fixed=fixedRows[activeIndex]||new Set();
+  let rows=report.enriched.map((row,i)=>({row,key:rowKey(row,i)}));
+  if (!showFixed) rows=rows.filter(({key})=>!fixed.has(key));
+  if (searchTerm) { const t=searchTerm.toLowerCase(); rows=rows.filter(({row})=>Object.values(row).join(' ').toLowerCase().includes(t)); }
+  if (priorityFilter) rows=rows.filter(({row})=>row._priority===priorityFilter);
+  return rows;
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s) { return (s||'').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
+function trunc(s,n) { s=String(s||'').replace(/\n/g,' '); return s.length>n?s.slice(0,n)+'…':s; }
+
+function onSearch() { const i=document.getElementById('searchInput'); if(i) searchTerm=i.value; currentPage=1; if(activeIndex>=0) renderTable(reports[activeIndex]); }
+function onFilter() { const s=document.getElementById('prioritySelect'); if(s) priorityFilter=s.value; currentPage=1; if(activeIndex>=0) renderTable(reports[activeIndex]); }
+function changePage(dir) {
+  if(activeIndex<0) return;
+  const tp=Math.max(1,Math.ceil(getFilteredWithKeys(reports[activeIndex]).length/PAGE_SIZE));
+  currentPage=Math.max(1,Math.min(tp,currentPage+dir));
+  renderTable(reports[activeIndex]);
+}
+
+// ── EXPORT ────────────────────────────────────────────────────
+function issueSummary(type,row) {
+  if(type==='404')      return `404 — ${row['No. of all inlinks']||'0'} inlinks`;
+  if(type==='broken')   return `Broken redirect → ${row['Redirect URL']} (${row['Redirect URL code']})`;
+  if(type==='chain')    return `${row['No. of redirect chain URLs']}-hop redirect chain`;
+  if(type==='hreflang') return (row['Hreflang issues']||'').split('\n')[0];
+  return 'Unknown issue';
+}
+
+function downloadCSV(unfixedOnly=false) {
+  if(activeIndex<0) return;
+  const r=reports[activeIndex];
+  const fixed=fixedRows[activeIndex]||new Set();
+  let rows=r.enriched.map((row,i)=>({row,key:rowKey(row,i)}));
+  if(unfixedOnly) rows=rows.filter(({key})=>!fixed.has(key));
+  const lines=[['ReportType','URL','IssueSummary','RecommendedFix','Priority','Assignee','SourcePage','Fixed'].join(',')];
+  rows.forEach(({row,key})=>{
+    lines.push([r.type,row.URL||'',issueSummary(r.type,row),row._fix,row._priority,row._assignee.label,
+      (row['First found at']||row['Redirect URL']||'').split('\n')[0],
+      fixed.has(key)?'YES':'NO'
+    ].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
+  a.download=`seo-actions-${r.type}${unfixedOnly?'-unfixed':''}.csv`; a.click();
+  showToast('CSV downloaded ✓');
+}
+
+function copyJira() {
+  if(activeIndex<0) return;
+  const r=reports[activeIndex];
+  const fixed=fixedRows[activeIndex]||new Set();
+  const top=r.enriched.map((row,i)=>({row,key:rowKey(row,i)}))
+    .filter(({key,row})=>!fixed.has(key)&&(row._priority==='CRITICAL'||row._priority==='HIGH'))
+    .slice(0,20);
+  const c=CONTENT[r.type]||{};
+  const lines=[`# SEO Action Items — ${c.title||r.type}`,`(${top.length} Critical/High unfixed items)`,''];
+  top.forEach(({row})=>{
+    lines.push(`**[${row._priority}] ${row.URL}**`);
+    lines.push(`- Issue: ${issueSummary(r.type,row)}`);
+    lines.push(`- Fix: ${row._fix}`);
+    lines.push(`- Assignee: ${row._assignee.label}`);
+    lines.push('');
+  });
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>showToast('Copied to clipboard ✓'));
+}
+
+function showToast(msg, success=true) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(success?' success':'');;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── FILE LOAD ─────────────────────────────────────────────────
+function loadFile(file) {
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const {headers,rows}=parseCsv(e.target.result);
+    const type=detectReportType(headers,rows);
+    const pOrder={CRITICAL:0,HIGH:1,MEDIUM:2,LOW:3};
+    const enriched=rows.map(row=>({
+      ...row,
+      _priority:computePriority(type,row),
+      _fix:generateFix(type,row),
+      _assignee:getAssignee(type)
+    })).sort((a,b)=>(pOrder[a._priority]||3)-(pOrder[b._priority]||3));
+    const idx=reports.length;
+    reports.push({filename:file.name,type,headers,rows,enriched});
+    fixedRows[idx]=new Set();
+    renderSidebar();
+    activateReport(idx);
+  };
+  reader.readAsText(file);
+}
+
+// ── DRAG & DROP ───────────────────────────────────────────────
+const dropArea=document.getElementById('dropArea');
+dropArea.addEventListener('dragover',e=>{e.preventDefault();dropArea.classList.add('dragging');});
+dropArea.addEventListener('dragleave',()=>dropArea.classList.remove('dragging'));
+dropArea.addEventListener('drop',e=>{
+  e.preventDefault(); dropArea.classList.remove('dragging');
+  [...e.dataTransfer.files].filter(f=>f.name.endsWith('.csv')).forEach(loadFile);
+});
+document.getElementById('hiddenInput').addEventListener('change',e=>{
+  [...e.target.files].forEach(loadFile); e.target.value='';
+});
+</script>
+
+<!-- ═══ REFFINE SHARED FOOTER ═══ -->
+<footer class="rf-footer">
+  <div class="rf-footer-inner">
+    <span class="rf-footer-brand">Reffine &middot; MENA &middot; JLR Hub</span>
+    <div class="rf-footer-links">
+      <a href="index.html"            class="rf-footer-link" data-rfpage="index">Dashboard</a>
+      <a href="translation.html"      class="rf-footer-link" data-rfpage="translation">Translate</a>
+      <a href="translation-tool.html" class="rf-footer-link" data-rfpage="translation-tool">Translate Tool</a>
+      <a href="seo-tool.html"         class="rf-footer-link" data-rfpage="seo-tool">SEO</a>
+      <a href="offer-generator.html"  class="rf-footer-link" data-rfpage="offer-generator">Offers</a>
+      <a href="retailer-locator.html" class="rf-footer-link" data-rfpage="retailer-locator">Retailers</a>
+      <a href="login.html"            class="rf-footer-link" data-rfpage="admin" style="color:rgba(138,142,156,0.35);">Admin</a>
+    </div>
+  </div>
+</footer>
+<script>
+(function(){
+  var p=(location.pathname.split('/').pop()||'index.html').replace('.html','')||'index';
+  document.querySelectorAll('.rf-footer-link[data-rfpage]').forEach(function(a){
+    if(a.getAttribute('data-rfpage')===p) a.classList.add('rf-active');
+  });
+})();
+</script>
+
+
+</body>
+</html>
